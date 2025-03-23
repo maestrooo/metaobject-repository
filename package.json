@@ -1,0 +1,41 @@
+{
+  "name": "metaobject-orm",
+  "version": "1.0.0",
+  "description": "A simple ORM to manipulate Shopify metaobjects and metafields.",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maestrooo/metaobject-orm.git"
+  },
+  "keywords": [
+    "graphql",
+    "builder"
+  ],
+  "author": "Michael Gallego",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/maestrooo/metaobject-orm/issues"
+  },
+  "homepage": "https://github.com/maestrooo/metaobject-orm#readme",
+  "dependencies": {
+    "raku-ql": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@shopify/shopify-app-remix": "^3.8.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.6",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.2"
+  }
+}

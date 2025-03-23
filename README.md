@@ -21,7 +21,9 @@ npm i metaobject-orm
 
 First, define mappings for your metaobjects, including fields, embedded structures, and relationships.
 
-### Embedded Objects
+### Embeddable object
+
+Embedded objects are objects defined in your code, but that do not map to a metaobject definition on Shopify. Instead, they are meant to be embedded as a JSON field of a parent metaobject, while still giving you a clean object-oriented architecture:
 
 **Address.ts**:
 
@@ -37,7 +39,7 @@ class Address {
 }
 ```
 
-### Metaobject Definitions
+### Metaobjects
 
 **Instructor.ts**:
 
@@ -45,7 +47,7 @@ class Address {
 import { Metaobject, Field } from 'metaobject-orm/decorators';
 
 @Metaobject({
-  type: 'instructor',
+  type: '$app:instructor',
   name: 'Instructor',
   access: { admin: 'MERCHANT_READ', storefront: 'PUBLIC_READ' }
 })
@@ -65,7 +67,7 @@ import { Metaobject, Field, Embedded, Reference } from 'metaobject-orm/decorator
 import { Money } from 'metaobject-orm/types';
 
 @Metaobject({
-  type: 'workshop',
+  type: '$app:workshop',
   name: 'Workshop',
   access: { admin: 'MERCHANT_READ', storefront: 'PUBLIC_READ' }
 })
@@ -97,7 +99,7 @@ class Workshop {
 - Embeddables don't need `@Field` decorators, as they're serialized as JSON.  
 - Keys and field names are automatically inferred (pascal-case names, underscore-separated keys) to match Liquid conventions.
 
-## Decorators Reference
+## Decorators reference
 
 ### @Metaobject
 
@@ -110,13 +112,25 @@ class Workshop {
 | `capabilities` | `MetaobjectCapabilities`  | ❌ No     | Default capabilities                                        |
 | `repository`   | `class`                   | ❌ No     | Custom repository class                                     |
 
-*Additional decorators to be documented soon.*
+### @Embeddable
+
+@TODO
+
+### @Field
+
+@TODO
+
+### @Reference
+
+@TODO
 
 ## Working with the Object Manager
 
+> As of today, Remix (most Shopify apps are created with it) does not have middleware concept. As a consequence, the object manager must be initialized on each loader with the GraphQL client. In the future, when Remix will support middlewares, it will be possible to initialize it once, so that you don't have to do it on nested loaders. To ease this future migration, passing the client is done with a separated `withClient` method.
+
 ### Managed Objects
 
-Managed objects provide both your data and Shopify metadata. An object is managed when you retrieve it from a `find*` method.
+Managed objects provide both your data and Shopify metadata (supported metadata are documented in the example). An object is managed when you retrieve it from a `find*` method.
 
 ```typescript
 import { objectManager } from 'metaobject-orm/persistence';
@@ -124,7 +138,12 @@ import { objectManager } from 'metaobject-orm/persistence';
 const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, { id: 'gid://shopify/Metaobject/123' });
 
 console.log(workshop.title);
+console.log(workshop.system.id);
+console.log(workshop.system.handle);
 console.log(workshop.system.createdAt);
+console.log(workshop.system.updatedAt);
+console.log(workshop.system.displayName);
+console.log(workshop.system.thumbnail);
 ```
 
 ### CRUD Operations
@@ -143,7 +162,7 @@ const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop,
 const workshopByHandle = await objectManager.withClient(admin.graphql).findOne(Workshop, { handle: 'foo' });
 ```
 
-Throws if not found:
+The `findOne` method might returns null if the object is not found. You can also throw an exception instead by using the `findOneOrFail` method:
 
 ```typescript
 import { objectManager } from 'metaobject-orm/persistence';
@@ -163,6 +182,7 @@ import { objectManager } from 'metaobject-orm/persistence';
 const workshops = await objectManager.withClient(admin.graphql).find(Workshop, {
   query: 'display_name: f',
   sortBy: 'display_name',
+  reverse: false,
   first: 10, // or last for backward pagination
   after: '' // or before for backward pagination
 });
@@ -176,11 +196,11 @@ Single delete:
 import { objectManager } from 'metaobject-orm/persistence';
 
 // By ID
-await objectManager.delete(Workshop, { client, id: 'gid://shopify/Metaobject/123' });
+await objectManager.withClient(admin.graphql).delete(Workshop, { id: 'gid://shopify/Metaobject/123' });
 
 // Managed object
 const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, { handle: 'foo' });
-await objectManager.delete(Workshop, { client, object: workshop });
+await objectManager.withClient(admin.graphql).delete(Workshop, { object: workshop });
 ```
 
 Bulk delete (async):
@@ -329,7 +349,7 @@ import { Metaobject } from 'metaobject-orm/decorators';
 import { WorkshopRepository } from './workshop-repository';
 
 @Metaobject({
-  type: 'workshop',
+  type: '$app:workshop',
   repository: WorkshopRepository
 })
 class Workshop {
@@ -459,7 +479,7 @@ Here's how you can implement the `DynamicFields` decorator:
 ```ts
 import { Metaobject } from 'metaobject-orm/decorators';
 
-@Metaobject({ type: 'review' })
+@Metaobject({ type: '$app:review' })
 class Review {
   @Field({ type: 'rating' })
   rating: object;

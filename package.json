@@ -10,7 +10,8 @@
   ],
   "scripts": {
     "build": "tsup",
-    "test": "jest"
+    "test": "jest",
+    "dev": "vite"
   },
   "repository": {
     "type": "git",
@@ -27,7 +28,8 @@
   },
   "homepage": "https://github.com/maestrooo/metaobject-orm#readme",
   "dependencies": {
-    "raku-ql": "^1.1.0"
+    "raku-ql": "^1.1.0",
+    "snake-camel": "^1.0.9"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
@@ -36,6 +38,10 @@
     "ts-jest": "^29.2.6",
     "ts-node": "^10.9.2",
     "tsup": "^8.4.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vite": "^6.2.3"
+  },
+  "overrides": {
+    "esbuild": "^0.25.1"
   }
 }

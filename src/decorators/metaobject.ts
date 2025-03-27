@@ -1,6 +1,6 @@
-import { MetaobjectAccess, MetaobjectAdminAccess, MetaobjectCapabilities, MetaobjectStorefrontAccess } from "~/types/admin.types";
+import { Constructor, MetaobjectAccess, MetaobjectCapabilities, MetaobjectClassMetadata } from "../types";
 import { classMetadataFactory } from "../class-metadata-factory";
-import { MetaobjectClassMetadata } from "../types";
+import { ObjectRepository } from "../persistence/object-repository";
 
 type DecoratorMetaobjectOptions = {
   type: string;
@@ -8,6 +8,7 @@ type DecoratorMetaobjectOptions = {
   description?: string;
   capabilities?: MetaobjectCapabilities;
   access?: MetaobjectAccess;
+  repositoryClass?: Constructor<ObjectRepository<any>>;
 }
 
 export function Metaobject(options: DecoratorMetaobjectOptions) { 
@@ -16,27 +17,19 @@ export function Metaobject(options: DecoratorMetaobjectOptions) {
       throw new Error('@Metaobject() can only be used as a class decorator');
     }
 
-    const metaobjectClassMetadata = classMetadataFactory.upsertMetadataFor(context.metadata) as MetaobjectClassMetadata;
+    const { resolve } = classMetadataFactory.getMetadataFor(context.metadata);
 
-    metaobjectClassMetadata.kind = 'metaobject';
-    metaobjectClassMetadata.fieldDefinitions ??= [];
-    metaobjectClassMetadata.definition = {
+    const metaobjectClassMetadata: MetaobjectClassMetadata = {
+      kind: 'metaobject',
       type: options.type,
-      name: options.name ?? '',
-      displayNameKey: options.displayNameKey ?? '',
+      name: options.name,
       description: options.description ?? '',
-      access: options.access ?? {
-        admin: MetaobjectAdminAccess.MerchantRead,
-        storefront: MetaobjectStorefrontAccess.PublicRead
-      },
-      capabilities: options.capabilities ?? {
-        publishable: {
-          enabled: true
-        },
-        translatable: {
-          enabled: false
-        }
-      }
-    }
+      access: { admin: 'MERCHANT_READ', storefront: 'PUBLIC_READ', ...options.access },
+      capabilities: { publishable: { enabled: true }, translatable: { enabled: false }, ...options.capabilities },
+      repositoryClass: options.repositoryClass,
+      fields: []
+    };
+
+    resolve(metaobjectClassMetadata);
   }
 }

@@ -1,124 +1,102 @@
-import { AdminGraphqlClient } from "@shopify/shopify-app-remix/server";
-import { MetafieldDefinitionValidation, MetafieldReference, MetaobjectAccess, MetaobjectCapabilityDataOnlineStore, MetaobjectCapabilityDataPublishable, MetaobjectField, MetaobjectThumbnail } from "~/types/admin.types";
+import { ObjectRepository } from "./persistence/object-repository";
 
-export type PartialMetaobjectField = Pick<MetaobjectField, 'key' | 'type' | 'jsonValue'>;
+export type Constructor<T = any> = new (...args: any[]) => T;
 
-export type ReferenceTypename = Extract<MetafieldReference['__typename'], string>;
-
-export type ReferenceFragment = Record<ReferenceTypename, string>;
-
-export type MappedProperty = {
-  propertyName: string;
+export enum CurrencyCode { 
+  Aed = 'AED', Afn = 'AFN', All = 'ALL', Amd = 'AMD', Ang = 'ANG', Aoa = 'AOA', Ars = 'ARS', Aud = 'AUD', Awg = 'AWG', Azn = 'AZN', Bam = 'BAM', 
+  Bbd = 'BBD', Bdt = 'BDT', Bgn = 'BGN', Bhd = 'BHD', Bif = 'BIF', Bmd = 'BMD', Bnd = 'BND', Bob = 'BOB', Brl = 'BRL', Bsd = 'BSD', Btn = 'BTN', 
+  Bwp = 'BWP', Byn = 'BYN', Byr = 'BYR', Bzd = 'BZD', Cad = 'CAD', Cdf = 'CDF', Chf = 'CHF', Clp = 'CLP', Cny = 'CNY', Cop = 'COP', Crc = 'CRC', 
+  Cve = 'CVE', Czk = 'CZK', Djf = 'DJF', Dkk = 'DKK', Dop = 'DOP', Dzd = 'DZD', Egp = 'EGP', Ern = 'ERN', Etb = 'ETB', Eur = 'EUR', Fjd = 'FJD', 
+  Fkp = 'FKP', Gbp = 'GBP', Gel = 'GEL', Ghs = 'GHS', Gip = 'GIP', Gmd = 'GMD', Gnf = 'GNF', Gtq = 'GTQ', Gyd = 'GYD', Hkd = 'HKD', Hnl = 'HNL', 
+  Hrk = 'HRK', Htg = 'HTG', Huf = 'HUF', Idr = 'IDR', Ils = 'ILS', Inr = 'INR', Iqd = 'IQD', Irr = 'IRR', Isk = 'ISK', Jep = 'JEP', Jmd = 'JMD', 
+  Jod = 'JOD', Jpy = 'JPY', Kes = 'KES', Kgs = 'KGS', Khr = 'KHR', Kid = 'KID', Kmf = 'KMF', Krw = 'KRW', Kwd = 'KWD', Kyd = 'KYD', Kzt = 'KZT', 
+  Lak = 'LAK', Lbp = 'LBP', Lkr = 'LKR', Lrd = 'LRD', Lsl = 'LSL', Ltl = 'LTL', Lvl = 'LVL', Lyd = 'LYD', Mad = 'MAD', Mdl = 'MDL', Mga = 'MGA', 
+  Mkd = 'MKD', Mmk = 'MMK', Mnt = 'MNT', Mop = 'MOP', Mru = 'MRU', Mur = 'MUR', Mvr = 'MVR', Mwk = 'MWK', Mxn = 'MXN', Myr = 'MYR', Mzn = 'MZN', 
+  Nad = 'NAD', Ngn = 'NGN', Nio = 'NIO', Nok = 'NOK', Npr = 'NPR', Nzd = 'NZD', Omr = 'OMR', Pab = 'PAB', Pen = 'PEN', Pgk = 'PGK', Php = 'PHP', 
+  Pkr = 'PKR', Pln = 'PLN', Pyg = 'PYG', Qar = 'QAR', Ron = 'RON', Rsd = 'RSD', Rub = 'RUB', Rwf = 'RWF', Sar = 'SAR', Sbd = 'SBD', Scr = 'SCR', 
+  Sdg = 'SDG', Sek = 'SEK', Sgd = 'SGD', Shp = 'SHP', Sll = 'SLL', Sos = 'SOS', Srd = 'SRD', Ssp = 'SSP', Std = 'STD', Stn = 'STN', Syp = 'SYP', 
+  Szl = 'SZL', Thb = 'THB', Tjs = 'TJS', Tmt = 'TMT', Tnd = 'TND', Top = 'TOP', Try = 'TRY', Ttd = 'TTD', Twd = 'TWD', Tzs = 'TZS', Uah = 'UAH', 
+  Ugx = 'UGX', Usd = 'USD', Uyu = 'UYU', Uzs = 'UZS', Ved = 'VED', Vef = 'VEF', Ves = 'VES', Vnd = 'VND', Vuv = 'VUV', Wst = 'WST', Xaf = 'XAF', 
+  Xcd = 'XCD', Xof = 'XOF', Xpf = 'XPF', Xxx = 'XXX', Yer = 'YER', Zar = 'ZAR', Zmw = 'ZMW' 
 }
 
-export type FieldProperty = MappedProperty & {
-  name: string;
-  key: string;
-  type: string;
-  list: boolean;
-  required: boolean;
-  description: string;
-  reference?: boolean;
-  referenceTypename?: ReferenceTypename;
-  entity?: { new (...args: any[]): any };
-  validations: Omit<MetafieldDefinitionValidation, 'type'>[];
-}
-
-export type EmbeddableFieldProperty = MappedProperty & {
-  key: string;
-}
-
-export type DynamicFieldsProperty = MappedProperty & {
-  keyPrefix: string;
-}
-
-export type MetafieldType = 'boolean' | 'list.boolean' | 'color' | 'list.color' | 'date' | 'list.date' | 'date_time' | 'list.date_time'
-  | 'dimension' | 'list.dimension' | 'id' | 'list.id' | 'json' | 'link' | 'list.link' | 'money' | 'list.money' | 'multi_line_text_field' 
-  | 'number_decimal' | 'list.number_decimal' | 'number_integer' | 'list.number_integer' | 'rating' | 'list.rating' | 'rich_text_field'
-  | 'single_line_text_field' | 'list.single_line_text_field' | 'url' | 'list.url' | 'volume' | 'list.volume' | 'weight' | 'list.weight'
-  | 'collection_reference' | 'list.collection_reference' | 'file_reference' | 'list.file_reference' | 'customer_reference' | 'list.customer_reference'
-  | 'metaobject_reference' | 'list.metaobject_reference' | 'mixed_reference' | 'list.mixed_reference' | 'page_reference' | 'list.page_reference' 
-  | 'product_reference' | 'list.product_reference' | 'variant_reference' | 'list.variant_reference' | 'product_taxonomy_value_reference'
-  | 'list.product_taxonomy_value_reference';
-
-export type MetaobjectDefinition = {
-  type: string;
-  name?: string;
-  displayNameKey?: string;
-  description?: string;
-  capabilities: MetaobjectCapabilities;
-  access: MetaobjectAccess;
-}
-
-export type ClassMetadataKind = 'metaobject' | 'embeddable';
-
-export type ClassMetadata = {
-  kind?: ClassMetadataKind
-}
-
-export type MetaobjectClassMetadata = ClassMetadata & {
-  definition: MetaobjectDefinition;
-  fieldDefinitions: FieldProperty[];
-  dynamicFieldsDefinition: DynamicFieldsProperty;
-}
-
-export type EmbeddableClassMetadata = ClassMetadata & {
-  schema?: object;
-  fieldDefinitions: EmbeddableFieldProperty[];
+export type Money = {
+  amount: any;
+  currencyCode: CurrencyCode;
 };
 
-export type MetaobjectSystem = {
-  readonly id: string;
-  readonly handle: string;
-  readonly displayName: string;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
-  readonly thumbnail?: MetaobjectThumbnail;
+export type FileMediaType = 'Image' | 'Video';
+
+export type MetafieldDefinitionValidation = {
+  name: string;
+  type: string;
+  value?: string;
 }
 
 export type MetaobjectCapabilities = {
-  publishable: MetaobjectCapabilityDataPublishable;
-  onlineStore: MetaobjectCapabilityDataOnlineStore;
+  publishable?: {
+    enabled: boolean
+  };
+  translatable?: {
+    enabled: boolean
+  };
+  renderable?: {
+    enabled: boolean;
+    data?: {
+      metaDescriptionKey?: string;
+      metaTitleKey?: string;
+    }
+  };
+  onlineStore?: {
+    enabled: boolean;
+    data?: {
+      urlHandle: string;
+      createRedirects?: boolean;
+    }
+  }
 }
 
-export type ManagedObject<T> = T & {
-  readonly system: MetaobjectSystem;
-  readonly capabilities: MetaobjectCapabilities;
+export type MetaobjectAccess = {
+  admin?: 'MERCHANT_READ' | 'MERCHANT_READ_WRITE';
+  storefront?: 'PUBLIC_READ' | 'NONE';
 }
 
-/** Object manager specific types */
-
-export type SortKey = 'id' | 'type' | 'updated_at' | 'display_name';
-export type ForwardPagination = { first: number; after?: string };
-export type BackwardPagination = { last: number; before?: string };
-
-export type FindOneWhereOptions = { id: string; handle?: never } | { handle: string; id?: never };
-
-export type FindOneOptions = {
-  client: AdminGraphqlClient;
-  where: FindOneWhereOptions,
+export type MetaobjectClassMetadata = {
+  kind: 'metaobject';
+  repositoryClass: Constructor<ObjectRepository<any>> | undefined;
+  type: string;
+  name: string;
+  description: string;
+  access: MetaobjectAccess;
+  capabilities: MetaobjectCapabilities;
+  fields: FieldDefinition[];
 }
 
-export type FindOptions = {
-  client: AdminGraphqlClient;
-  pagination?: ForwardPagination | BackwardPagination;
-  query?: string;
-  sortKey?: SortKey;
-  reverse?: boolean;
+export type EmbeddableClassMetadata = {
+  kind: 'embeddable';
+  schema?: object;
 }
 
-export type DeleteOptions =
-  | { client: AdminGraphqlClient; id: string; metaobject?: never }
-  | { client: AdminGraphqlClient; id?: never; metaobject: ManagedObject<any> };
+export type ClassMetadata = MetaobjectClassMetadata | EmbeddableClassMetadata;
 
-export type DeleteManyOptions =
-  | { client: AdminGraphqlClient; ids: string[]; metaobjects?: never }
-  | { client: AdminGraphqlClient; ids?: never; metaobjects: ManagedObject<any>[] };
+export type FieldDefinition = BaseFieldDefinition | FieldEmbeddedDefinition | FieldMetaobjectReferenceDefinition;
 
-export type CreateOptions = { client: AdminGraphqlClient; metaobject: object; handle?: string };
+export type BaseFieldDefinition = {
+  propertyName: string;
+  key: string;
+  type: string;
+  name: string;  
+  description: string;
+  list: boolean;
+  required: boolean;
+  validations?: object;
+}
 
-export type CreateManyOptions = { client: AdminGraphqlClient; metaobjects: object[] };
+export type FieldEmbeddedDefinition = BaseFieldDefinition & {
+  embedded?: Constructor;
+}
 
-export type UpsertOptions = { client: AdminGraphqlClient; metaobject: object; handle?: string };
-
-export type UpdateOptions = { client: AdminGraphqlClient; id: string; metaobject: object };
+export type FieldMetaobjectReferenceDefinition = BaseFieldDefinition & {
+  metaobject?: Constructor;
+  metaobjectType?: string;
+}

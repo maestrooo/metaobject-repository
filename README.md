@@ -63,7 +63,7 @@ class Instructor {
 **Workshop.ts**:
 
 ```typescript
-import { Metaobject, Field, Embedded, Reference } from 'metaobject-orm/decorators';
+import { Metaobject, Field } from 'metaobject-orm/decorators';
 import { Money } from 'metaobject-orm/types';
 
 @Metaobject({
@@ -81,48 +81,108 @@ class Workshop {
   @Field({ type: 'money' })
   participationPrice: Money;
 
-  @Field({ type: 'single_line_text_field', array: true, description: 'Internal use tags' })
+  @Field({ type: 'single_line_text_field', list: true, description: 'Internal use tags' })
   tags: string[];
 
-  @Embedded({ object: Address })
+  @Field({ embedded: Address })
   address: Address;
 
-  @Reference({ object: Instructor, array: true })
+  @Field({ metaobject: Instructor, list: true })
   instructors: Reference<Instructor>[];
 
-  @Reference({ object: 'Product' })
+  @Field({ type: 'product_reference' })
   product: Reference<object>;
 }
 ```
 
 **Important notes:**  
-- Embeddables don't need `@Field` decorators, as they're serialized as JSON.  
+- Embeddables don't support `@Field` decorators, as the whole content is serialized to JSON. If you wish to configure which
+fields are set, you can override the `toJSON` method inside the embeddable.
 - Keys and field names are automatically inferred (pascal-case names, underscore-separated keys) to match Liquid conventions.
 
 ## Decorators reference
 
 ### @Metaobject
 
-| Parameter      | Type                      | Required | Description                                                  |
-|----------------|---------------------------|:--------:|--------------------------------------------------------------|
-| `type`         | `string`                  | ✅ Yes    | Metaobject definition type                                   |
-| `name`         | `string`                  | ✅ Yes    | Display name for the metaobject                              |
-| `description`  | `string`                  | ❌ No     | Optional description                                        |
-| `access`       | `MetaobjectAccess`        | ❌ No     | Admin/storefront permissions                                 |
-| `capabilities` | `MetaobjectCapabilities`  | ❌ No     | Default capabilities                                        |
-| `repository`   | `class`                   | ❌ No     | Custom repository class                                     |
+| Parameter         | Type                      | Required | Description                                                  |
+|------------------ |---------------------------|:--------:|--------------------------------------------------------------|
+| `type`            | `string`                  | ✅ Yes    | Metaobject definition type                                   |
+| `name`            | `string`                  | ✅ Yes    | Display name for the metaobject                              |
+| `description`     | `string`                  | ❌ No     | Optional description                                        |
+| `access`          | `MetaobjectAccess`        | ❌ No     | Admin/storefront permissions                                 |
+| `capabilities`    | `MetaobjectCapabilities`  | ❌ No     | Default capabilities                                        |
+| `repositoryClass` | `class`                   | ❌ No     | Custom repository class                                     |
 
 ### @Embeddable
 
-@TODO
+| Parameter | Type     | Required | Description                                                                 |
+|-----------|----------|:--------:|-----------------------------------------------------------------------------|
+| `schema`  | `object` |   ❌ No   | A valid [JSON Schema](https://json-schema.org/learn/miscellaneous-examples) object. |
 
 ### @Field
 
-@TODO
+| Parameter    | Type      | Required | Description                                                                                                                                                                                                 |
+|--------------|-----------|:--------:|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `type`       | `string`  | ✅ Yes   | One of the supported [metafield type](https://shopify.dev/docs/apps/build/custom-data/metafields/list-of-data-types#supported-types). When using a list, do **not** prepend `"list."`; use the `list` flag instead. |
+| `name`       | `string`  | ❌ No    | Optional display name for the field in the definition. If omitted, the property name is wordified (e.g., `"participationPrice"` becomes `"Participation price"`).                                          |
+| `key`        | `string`  | ❌ No    | The field key in the metaobject. If omitted, the property name is converted to snake_case (e.g., `"participationPrice"` becomes `"participation_price"`).                                                 |
+| `description`| `string`  | ❌ No    | Optional description that appears in the metaobject structure.                                                                                                                                              |
+| `required`   | `boolean` | ❌ No    | If `true`, an object must have a value for this field to be saved.                                                                                                                                          |
+| `list`       | `boolean` | ❌ No    | Set to `true` to allow a list of values. **Note:** not supported for the `rich_text_field` metafield type.                                                                                                 |
 
-### @Reference
+In addition to those global elements, some fields have extra parameters.
 
-@TODO
+#### Embedded fields
+
+When embedding an other object, you must pass the `embedded` attribute to the embeddable object. Note that the type will be forced to `json`, so you don't
+have to specify the type explicitly:
+
+| Parameter | Type     | Required | Description                                                                 |
+|-----------|----------|:--------:|-----------------------------------------------------------------------------|
+| `embedded`  | Object |   ✅ Yes    | The constructor name |
+
+Example:
+
+```ts
+@Field({ embedded: Address })
+address?: Address;
+```
+
+#### Metaobjects
+
+When creating a relation to metaobjects, you have two options:
+
+* For metaobjects that you own (objects that you also manage using the library), you must pass the `metaobject` parameter. The `type` is automatically set to `metaobject_reference` so you don't have to set it explicitly.
+
+| Parameter    | Type   | Required | Description                         |
+|--------------|--------|:--------:|-------------------------------------|
+| `metaobject` | Object | ✅ Yes   | The constructor of the metaobject.  |
+
+Example:
+
+```ts
+@Field({ metaobject: Instructor })
+instructor?: Instructor;
+```
+
+* For metaobjects that you don't own (for instance to create a reference to a metaobject own by Shopify), you must explicitly pass the `type` to `metaobject_reference`, and the `metaobjectType` to the actual type:
+
+| Parameter        | Type     | Required | Description             |
+|------------------|----------|:--------:|-------------------------|
+| `metaobjectType` | `string` | ✅ Yes   | The metaobject type.    |
+
+Example:
+
+```ts
+@Field({ type: 'metaobject_reference', metaobjectType: 'shopify--123--something' })
+something?: object;
+```
+
+### @DynamicFields
+
+| Parameter | Type     | Required | Description                                                                 |
+|-----------|----------|:--------:|-----------------------------------------------------------------------------|
+| `keyPrefix`  | `string` |  ✅ Yes  | A key prefix for all the dynamic fields. |
 
 ## Working with the Object Manager
 
@@ -156,10 +216,10 @@ Find by ID or handle:
 import { objectManager } from 'metaobject-orm/persistence';
 
 // By ID
-const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, { id: 'gid://shopify/Metaobject/123' });
+const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, 'gid://shopify/Metaobject/123');
 
 // By handle
-const workshopByHandle = await objectManager.withClient(admin.graphql).findOne(Workshop, { handle: 'foo' });
+const workshopByHandle = await objectManager.withClient(admin.graphql).findOne(Workshop, 'foo');
 ```
 
 The `findOne` method might returns null if the object is not found. You can also throw an exception instead by using the `findOneOrFail` method:
@@ -168,7 +228,7 @@ The `findOne` method might returns null if the object is not found. You can also
 import { objectManager } from 'metaobject-orm/persistence';
 
 try {
-  const workshop = await objectManager.withClient(admin.graphql).findOneOrFail(Workshop, { handle: 'foo' });
+  const workshop = await objectManager.withClient(admin.graphql).findOneOrFail(Workshop, 'foo');
 } catch (e) {
   // Handle error
 }
@@ -196,11 +256,11 @@ Single delete:
 import { objectManager } from 'metaobject-orm/persistence';
 
 // By ID
-await objectManager.withClient(admin.graphql).delete(Workshop, { id: 'gid://shopify/Metaobject/123' });
+await objectManager.withClient(admin.graphql).delete(Workshop, 'gid://shopify/Metaobject/123');
 
 // Managed object
-const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, { handle: 'foo' });
-await objectManager.withClient(admin.graphql).delete(Workshop, { object: workshop });
+const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, 'foo');
+await objectManager.withClient(admin.graphql).delete(Workshop, workshop);
 ```
 
 Bulk delete (async):
@@ -212,7 +272,7 @@ object that you can track for completion.
 import { objectManager } from 'metaobject-orm/persistence';
 
 // By IDs
-await objectManager.withClient(admin.graphql).deleteBulk(Workshop, { ids: ['gid://shopify/Metaobject/123'] });
+await objectManager.withClient(admin.graphql).deleteBulk(Workshop, ['gid://shopify/Metaobject/123']);
 ```
 
 #### Create
@@ -225,7 +285,7 @@ import { objectManager } from 'metaobject-orm/persistence';
 const workshop = new Workshop();
 workshop.title = 'Foo';
 
-await objectManager.withClient(admin.graphql).create(Workshop, { object: workshop });
+await objectManager.withClient(admin.graphql).create(Workshop, workshop);
 ```
 
 Create with handle:
@@ -233,7 +293,7 @@ Create with handle:
 ```typescript
 import { objectManager } from 'metaobject-orm/persistence';
 
-await objectManager.withClient(admin.graphql).create(Workshop, { input: { object: workshop, handle: 'foo' } });
+await objectManager.withClient(admin.graphql).create(Workshop, { object: workshop, handle: 'foo' });
 ```
 
 Create many (limited to 25):
@@ -241,7 +301,7 @@ Create many (limited to 25):
 ```typescript
 import { objectManager } from 'metaobject-orm/persistence';
 
-await objectManager.withClient(admin.graphql).createMany(Workshop, { objects: [workshop1, workshop2] });
+await objectManager.withClient(admin.graphql).createMany(Workshop, [workshop1, workshop2]);
 ```
 
 Or create many with handles:
@@ -249,7 +309,7 @@ Or create many with handles:
 ```typescript
 import { objectManager } from 'metaobject-orm/persistence';
 
-await objectManager.withClient(admin.graphql).createMany(Workshop, { input: [{ object: workshop1, handle: 'foo' }, { object: workshop2, handle: 'bar' }] });
+await objectManager.withClient(admin.graphql).createMany(Workshop, [{ object: workshop1, handle: 'foo' }, { object: workshop2, handle: 'bar' }]);
 ```
 
 #### Upsert
@@ -261,7 +321,7 @@ Upsert one object that is already managed (effectively doing an update):
 ```typescript
 import { objectManager } from 'metaobject-orm/persistence';
 
-await objectManager.withClient(admin.graphql).upsert(Workshop, object: workshop });
+await objectManager.withClient(admin.graphql).upsert(Workshop, workshop);
 ```
 
 Upsert one object with an explicit handle:
@@ -269,7 +329,7 @@ Upsert one object with an explicit handle:
 ```typescript
 import { objectManager } from 'metaobject-orm/persistence';
 
-await objectManager.withClient(admin.graphql).upsert(Workshop, { input: { object: workshop, handle: 'foo' } });
+await objectManager.withClient(admin.graphql).upsert(Workshop, { object: workshop, handle: 'foo' });
 ```
 
 Bulk upsert (async):
@@ -279,7 +339,7 @@ Bulk upsert (async):
 ```typescript
 import { objectManager } from 'metaobject-orm/persistence';
 
-await objectManager.withClient(admin.graphql).upsertBulk(Workshop, { input: [{ object: workshop, handle: 'foo' }] });
+await objectManager.withClient(admin.graphql).upsertBulk(Workshop, [{ object: workshop, handle: 'foo' }]);
 ```
 
 #### Update
@@ -287,10 +347,10 @@ await objectManager.withClient(admin.graphql).upsertBulk(Workshop, { input: [{ o
 ```typescript
 import { objectManager } from 'metaobject-orm/persistence';
 
-const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, { handle: 'foo' });
+const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, 'foo');
 workshop.title = 'New title';
 
-await objectManager.withClient(admin.graphql).update(Workshop, { object: workshop });
+await objectManager.withClient(admin.graphql).update(Workshop, workshop);
 ```
 
 ### Working with References
@@ -303,7 +363,7 @@ ask only what is needed.
 ```typescript
 import { objectManager } from 'metaobject-orm/persistence';
 
-const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, { handle: 'foo', include: ['instructors'] });
+const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, 'foo', { include: ['instructors'] });
 console.log(workshop.instructors);
 ```
 
@@ -318,7 +378,7 @@ have to manually pass the object type.
 import { objectManager } from 'metaobject-orm/persistence';
 
 const workshopRepository = objectManager.getRepository(Workshop);
-await workshopRepository.withClient(admin.graphql).findOne({ handle: 'foo' });
+await workshopRepository.withClient(admin.graphql).findOne('foo');
 ```
 
 #### Custom repositories
@@ -528,3 +588,9 @@ await objectManager.withClient(admin.graphql).create(Instructor, { object: instr
 const workshop = new Workshop();
 workshop.instructor = instructor;
 await objectManager.withClient(admin.graphql).create(Workshop, { object: workshop });
+
+
+## TODO
+
+* Add a `wrap` utility (like Mikro ORM does) to create the proxy.
+* Add a `objectManager.newObject(Workshop, { values })`.

@@ -1,5 +1,5 @@
 import { classMetadataFactory } from "../class-metadata-factory";
-import { MetaobjectClassMetadata } from "../types";
+import { MetaobjectClassMetadata } from "../old_types";
 
 type DecoratorDynamicFieldsOptions = {
   keyPrefix: string

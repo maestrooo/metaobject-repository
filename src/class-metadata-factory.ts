@@ -2,33 +2,38 @@ import { ClassMetadata } from "./types";
 
 Symbol.metadata ??= Symbol('Symbol.metadata'); // Shim metadata
 
+/**
+ * Factory to create class metadata. Class metadata holds all the mapping (fields, references...) used to interact
+ * with the metaobject API.
+ */
 class ClassMetadataFactory {
-  private classMetadataMap = new WeakMap<DecoratorMetadata, ClassMetadata>();
+  private classMetadataMap = new WeakMap<DecoratorMetadata, PromiseWithResolvers<ClassMetadata>>();
 
+  /**
+   * Check if a metadata for a given class exists already
+   */
   hasMetadataFor<T>(entityOrMetadata: (new (...args: any[]) => T) | DecoratorMetadata): boolean {
     return this.classMetadataMap.has(this.resolveMetadata(entityOrMetadata));
   }
 
-  getMetadataFor<T>(entityOrMetadata: (new (...args: any[]) => T) | DecoratorMetadata): ClassMetadata {
+  /**
+   * This get a metadata (if it exists) or create a new one. Please note that due to how decorators work, this
+   * return a resolver AND a promise that resolve to a class metadata
+   */
+  getMetadataFor<T>(entityOrMetadata: (new (...args: any[]) => T) | DecoratorMetadata): PromiseWithResolvers<ClassMetadata> {
     const resolvedMetadata = this.resolveMetadata(entityOrMetadata);
 
     if (!this.classMetadataMap.has(resolvedMetadata)) {
-      throw new Error(`Metadata does not exist for the entity. Make sure to add the @Metaobject or @Embeddable decorator to the entity class.`);
+      // If it does not exist yet, we create a new entry with a resolver
+      this.classMetadataMap.set(resolvedMetadata, Promise.withResolvers());
     }
 
     return this.classMetadataMap.get(resolvedMetadata)!;
   }
 
-  upsertMetadataFor<T>(entityOrMetadata: (new (...args: any[]) => T) | DecoratorMetadata): ClassMetadata {
-    if (this.hasMetadataFor(entityOrMetadata)) {
-      return this.getMetadataFor(entityOrMetadata)!;
-    }
-
-    this.classMetadataMap.set(this.resolveMetadata(entityOrMetadata), {});
-
-    return this.getMetadataFor(entityOrMetadata)!;
-  }
-
+  /**
+   * Resolve a class or name to a decorator metadata
+   */
   private resolveMetadata<T>(entityOrMetadata: (new (...args: any[]) => T) | DecoratorMetadata): DecoratorMetadata {
     return (typeof entityOrMetadata === 'function' ? entityOrMetadata[Symbol.metadata] : entityOrMetadata) as DecoratorMetadata;
   }

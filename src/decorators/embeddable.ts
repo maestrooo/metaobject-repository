@@ -11,10 +11,13 @@ export function Embeddable(options: DecoratorEmbeddableOptions = {}) {
       throw new Error('@Embeddable() can only be used as a class decorator');
     }
 
-    const embeddableClassMetadata = classMetadataFactory.upsertMetadataFor(context.metadata) as EmbeddableClassMetadata;
+    const { resolve } = classMetadataFactory.getMetadataFor(context.metadata);
 
-    embeddableClassMetadata.kind = 'embeddable';
-    embeddableClassMetadata.fieldDefinitions ??= [];
-    embeddableClassMetadata.schema = options.schema;
+    const embeddableClassMetadata: EmbeddableClassMetadata = {
+      kind: 'embeddable',
+      schema: options.schema
+    };
+
+    resolve(embeddableClassMetadata);
   }
 }

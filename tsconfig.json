@@ -4,6 +4,7 @@
     "module": "ESNext",
     "outDir": "./dist",
     "esModuleInterop": true,
+    "experimentalDecorators": false,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,

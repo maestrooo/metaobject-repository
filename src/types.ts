@@ -93,7 +93,7 @@ export type BaseFieldDefinition = {
 }
 
 export type FieldEmbeddedDefinition = BaseFieldDefinition & {
-  embedded?: Constructor;
+  embedded: Constructor;
 }
 
 export type FieldMetaobjectReferenceDefinition = BaseFieldDefinition & {

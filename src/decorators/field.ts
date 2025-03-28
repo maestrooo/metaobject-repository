@@ -1,7 +1,6 @@
 import { snake } from "snake-camel";
-import { classMetadataFactory } from "../class-metadata-factory";
-import { EmbeddableClassMetadata, FieldDefinition, FileMediaType, MetaobjectClassMetadata } from "../types";
 import { wordify } from "../utils/strings";
+import { FieldDefinition, FileMediaType } from "../types";
 
 type DecoratorBaseFieldOptions<T extends string, V = undefined> = {
   type: T;
@@ -68,48 +67,35 @@ export function Field(options: DecoratorFieldOptions) {
     if (context.kind !== 'field') {
       throw new Error('@Field() can only be used as a field decorator');
     }
-    
-    const execute = async () => {
-      const { promise } = classMetadataFactory.getMetadataFor(context.metadata);
-      const classMetadata = await promise as MetaobjectClassMetadata;
-  
-      let field: FieldDefinition = {
-        propertyName: context.name as string,
-        type: '', // will be filled later based on options
-        key: options.key ?? snake(context.name as string),
-        name: options.name ?? wordify(context.name as string),
-        description: options.description ?? '',
-        list: 'list' in options ? (options.list ?? false) : false,
-        required: options.required ?? false,
-        validations: 'validations' in options ? (options.validations ?? undefined) : undefined
-      }
 
-      if (field.key === 'system') {
-        throw new Error(`Field key "system" in the metaobject "${classMetadata.name}" is reserved and cannot be used. Use a different property or override the key.`);
-      }
-  
-      if (isEmbeddedOptions(options)) {
-        // When embedded, we have to check the embedded class and check if it has a schema
-        const { promise } = classMetadataFactory.getMetadataFor(options.embedded); 
-        const embeddableClassMetadata = await promise as EmbeddableClassMetadata;
-  
-        if (embeddableClassMetadata.schema) {
-          field = { ...field, type: 'json', embedded: options.embedded, validations: { schema: embeddableClassMetadata.schema } };
-        } else {
-          field = { ...field, type: 'json', embedded: options.embedded };
-        }
-      } else if (isMetaobjectOptions(options)) {
-        field = { ...field, type: 'metaobject_reference', metaobject: options.metaobject };
-      } else if (options.type === 'metaobject_reference') {
-        field = { ...field, type: 'metaobject_reference', metaobjectType: options.metaobjectType };
-      } else {
-        field = { ...field, type: options.type };
-      }
-  
-      classMetadata.fields.push(field);
+    if (context.name === 'system') {
+      throw new Error(`Field key "system" is reserved and cannot be used. Use a different property or override the key.`);
     }
 
-    execute();
+    context.metadata.parsedFields ??= []; // Ensure that the metadata has a pending fields array
+
+    let field: FieldDefinition = {
+      propertyName: context.name as string,
+      type: '', // will be filled later based on options
+      key: options.key ?? snake(context.name as string),
+      name: options.name ?? wordify(context.name as string),
+      description: options.description ?? '',
+      list: 'list' in options ? (options.list ?? false) : false,
+      required: options.required ?? false,
+      validations: 'validations' in options ? (options.validations ?? undefined) : undefined
+    }
+
+    if (isEmbeddedOptions(options)) {
+      field = { ...field, type: 'json', embedded: options.embedded };
+    } else if (isMetaobjectOptions(options)) {
+      field = { ...field, type: 'metaobject_reference', metaobject: options.metaobject };
+    } else if (options.type === 'metaobject_reference') {
+      field = { ...field, type: 'metaobject_reference', metaobjectType: options.metaobjectType };
+    } else {
+      field = { ...field, type: options.type };
+    }
+
+    (context.metadata.parsedFields as Array<FieldDefinition>).push(field);
   }
 }
 

@@ -17,6 +17,45 @@ To install the library, use npm:
 npm i metaobject-orm
 ```
 
+## Requirements
+
+Before using this library, some changes must be done to your Vite config and `tsconfig.json`. **Failing to do those changes will prevent the library to work.**
+
+### tsconfig.json
+
+Make sure the compiler options target is set to ES2022, ES2024 or ESNext:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ESNext"
+  }
+}
+```
+
+### package.json
+
+By default, Vite uses an older version of ESBuild which does not support native decorators. To enable support for decorators, add the following to the `package.json`:
+
+```json
+"overrides": {
+  "esbuild": "^0.25.1"
+}
+```
+
+### vite.config.ts
+
+In the `defineConfig`, add the following code:
+
+```js
+export default defineConfig({
+  // ... the existing config
+  esbuild: {
+    target: "es2024"
+  }
+});
+```
+
 ## Defining Mappings
 
 First, define mappings for your metaobjects, including fields, embedded structures, and relationships.

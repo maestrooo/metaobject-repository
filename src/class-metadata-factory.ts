@@ -1,34 +1,24 @@
 import { ClassMetadata } from "./types";
 
-Symbol.metadata ??= Symbol('Symbol.metadata'); // Shim metadata
-
 /**
  * Factory to create class metadata. Class metadata holds all the mapping (fields, references...) used to interact
  * with the metaobject API.
  */
 class ClassMetadataFactory {
-  private classMetadataMap = new WeakMap<DecoratorMetadata, PromiseWithResolvers<ClassMetadata>>();
-
-  /**
-   * Check if a metadata for a given class exists already
-   */
-  hasMetadataFor<T>(entityOrMetadata: (new (...args: any[]) => T) | DecoratorMetadata): boolean {
-    return this.classMetadataMap.has(this.resolveMetadata(entityOrMetadata));
-  }
+  private classMetadataMap = new WeakMap<DecoratorMetadata, ClassMetadata>();
 
   /**
    * This get a metadata (if it exists) or create a new one. Please note that due to how decorators work, this
    * return a resolver AND a promise that resolve to a class metadata
    */
-  getMetadataFor<T>(entityOrMetadata: (new (...args: any[]) => T) | DecoratorMetadata): PromiseWithResolvers<ClassMetadata> {
-    const resolvedMetadata = this.resolveMetadata(entityOrMetadata);
+  getMetadataFor<T>(entityOrMetadata: (new (...args: any[]) => T) | DecoratorMetadata): ClassMetadata {
+    const metadata = this.resolveMetadata(entityOrMetadata);
 
-    if (!this.classMetadataMap.has(resolvedMetadata)) {
-      // If it does not exist yet, we create a new entry with a resolver
-      this.classMetadataMap.set(resolvedMetadata, Promise.withResolvers());
+    if (!metadata.classMetadata) {
+      throw new Error(`No class metadata could be found for "${entityOrMetadata.name}". Decorate the class with @Metaobject.`);
     }
 
-    return this.classMetadataMap.get(resolvedMetadata)!;
+    return metadata.classMetadata as ClassMetadata;
   }
 
   /**

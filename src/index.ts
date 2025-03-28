@@ -1,3 +1,4 @@
+import { FieldBuilder } from 'raku-ql';
 import { classMetadataFactory } from './class-metadata-factory';
 import { Example } from './example';
 import { objectManager } from './persistence/object-manager';
@@ -11,14 +12,26 @@ class Another {
 
 }
 
-const { promise } = classMetadataFactory.getMetadataFor(Example);
+/*const { promise } = classMetadataFactory.getMetadataFor(Example);
 
 promise.then((metadata) => {
   console.log(metadata);
-});
+});*/
 
-const f = objectManager.getRepository(Another);
+//const classMetadata = classMetadataFactory.getMetadataFor(Example);
+//console.log(new Example());
+//console.log(new Example());
+//console.log(new Example());
+const metadata = classMetadataFactory.getMetadataFor(Example);
 
-console.log(f);
+//console.log(metadata);
 
-objectManager.findOne(Example, 'gid://shopify/Metaobject/123');
+
+objectManager.findOne(Example, 'foo');
+
+let u = new Example();
+let v = new Example();
+let w = new Example();
+
+
+//console.log(v.system);

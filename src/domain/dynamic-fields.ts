@@ -10,7 +10,7 @@ type FieldEntry = {
  * into a metaobject. This is useful for semi-dynamic metaobject definition, where we want to allow merchants to
  * potentially add their own custom fields.
  */
-class DynamicFields implements Iterable<[string, unknown]> {
+export class DynamicFields implements Iterable<[string, unknown]> {
   private fields = new Map<string, FieldEntry>();
 
   constructor(initialFields?: { [key: string]: FieldEntry }) {

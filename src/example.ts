@@ -14,6 +14,9 @@ export class Emb {
 export class Instructor {
   @Field({ type: 'single_line_text_field', list: true, required: true, validations: { maxLength: 10 } })
   name?: string;
+
+  @Field({ type: 'product_reference' })
+  subProduct?: string;
 }
 
 @Metaobject({
@@ -27,14 +30,24 @@ export class Example {
   allowProperty?: string;
 
   @Field({ type: 'single_line_text_field', list: true, required: true, validations: { maxLength: 10 } })
-  system?: string;
+  foo?: string;
 
-  @Field({ embedded: Emb })
+  @Field({ embedded: Emb, validations: { schema: { foo: 'bar' } } })
   example?: Emb;
-
-  @Field({ type: 'metaobject_reference', metaobjectType: '123' })
-  foo?: object;
 
   @Field({ metaobject: Instructor, list: true })
   instructors?: Instructor[];
+
+  @Field({ type: 'product_reference' })
+  product?: string;
+
+  @Field({ type: 'product_reference', list: true })
+  products?: string[];
+
+  @Field({ type: 'metaobject_reference', metaobjectType: 'foo-123' })
+  meta?: string[];
+
+  bar() {
+    console.log('TEST');
+  }
 }

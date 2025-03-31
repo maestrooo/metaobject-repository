@@ -88,11 +88,11 @@ export function Field(options: DecoratorFieldOptions) {
     if (isEmbeddedOptions(options)) {
       field = { ...field, type: 'json', embedded: options.embedded };
     } else if (isMetaobjectOptions(options)) {
-      field = { ...field, type: 'metaobject_reference', metaobject: options.metaobject };
+      field = { ...field, type: 'metaobject_reference', isReference: true, metaobject: options.metaobject };
     } else if (options.type === 'metaobject_reference') {
-      field = { ...field, type: 'metaobject_reference', metaobjectType: options.metaobjectType };
+      field = { ...field, type: 'metaobject_reference', isReference: true, metaobjectType: options.metaobjectType };
     } else {
-      field = { ...field, type: options.type };
+      field = { ...field, type: options.type, isReference: options.type.endsWith('_reference') };
     }
 
     (context.metadata.parsedFields as Array<FieldDefinition>).push(field);

@@ -1,7 +1,8 @@
 Symbol.metadata ??= Symbol('Symbol.metadata'); // Shim metadata
 
 type DecoratorEmbeddableOptions = {
-  schema?: object
+  schema?: object,
+  strict?: boolean
 }
 
 export function Embeddable(options: DecoratorEmbeddableOptions = {}) { 
@@ -12,7 +13,8 @@ export function Embeddable(options: DecoratorEmbeddableOptions = {}) {
 
     context.metadata.classMetadata = {
       kind: 'embeddable',
-      schema: options.schema
+      schema: options.schema,
+      strict: options.strict ?? true,
     }
   }
 }

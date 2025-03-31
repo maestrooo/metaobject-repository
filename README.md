@@ -157,6 +157,7 @@ fields are set, you can override the `toJSON` method inside the embeddable.
 | Parameter | Type     | Required | Description                                                                 |
 |-----------|----------|:--------:|-----------------------------------------------------------------------------|
 | `schema`  | `object` |   ❌ No   | A valid [JSON Schema](https://json-schema.org/learn/miscellaneous-examples) object. |
+| `strict`  | `boolean` |   ❌ No  | If set to false, properties that exist on Shopify but not in your object will be preserved. |
 
 ### @Field
 

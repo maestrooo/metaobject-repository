@@ -74,6 +74,7 @@ export type MetaobjectClassMetadata = {
 
 export type EmbeddableClassMetadata = {
   kind: 'embeddable';
+  strict: boolean;
   schema?: object;
 }
 
@@ -89,6 +90,7 @@ export type BaseFieldDefinition = {
   description: string;
   list: boolean;
   required: boolean;
+  isReference: boolean;
   validations?: object;
 }
 
@@ -97,6 +99,5 @@ export type FieldEmbeddedDefinition = BaseFieldDefinition & {
 }
 
 export type FieldMetaobjectReferenceDefinition = BaseFieldDefinition & {
-  metaobject?: Constructor;
-  metaobjectType?: string;
+  metaobject: Constructor;
 }

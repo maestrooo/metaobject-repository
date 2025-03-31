@@ -23,6 +23,8 @@ export function Metaobject(options: DecoratorMetaobjectOptions) {
       (context.metadata.classMetadata as MetaobjectClassMetadata).fields.forEach((field: FieldDefinition) => {
         if (isEmbeddedField(field)) {
           const embeddedClassMetadata = field.embedded[Symbol.metadata]?.classMetadata as EmbeddableClassMetadata;
+
+          embeddedClassMetadata.strict = embeddedClassMetadata.strict;
           
           if (embeddedClassMetadata.schema) {
             field.validations = { schema: embeddedClassMetadata.schema };

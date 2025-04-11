@@ -61,3 +61,7 @@ export type MetaobjectUpsertInput<T> = {
   object: T;
   handle: string;
 }
+
+export type CreateOptions = {
+  populate?: string[];
+}

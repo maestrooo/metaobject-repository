@@ -2,10 +2,14 @@ import { AdminGraphqlClient } from "@shopify/shopify-app-remix/server";
 import { classMetadataFactory } from "../class-metadata-factory";
 import { Constructor, FieldDefinition, MetaobjectClassMetadata } from "../types";
 import { ObjectRepository } from "./object-repository";
-import { FindOptions, Job, ManagedMetaobject, MetaobjectGid, MetaobjectCreateInput, MetaobjectUpsertInput, FindOneOptions } from "./types";
+import { FindOptions, Job, ManagedMetaobject, MetaobjectGid, MetaobjectCreateInput, MetaobjectUpsertInput, FindOneOptions, CreateOptions } from "./types";
 import { FieldBuilder, QueryBuilder } from "raku-ql";
-import { Metaobject, PageInfo } from "../types/admin.types";
+import { Metaobject, MetaobjectCreatePayload, MetaobjectDeletePayload, PageInfo } from "../types/admin.types";
 import { hydrateMetaobject } from "../hydrators/metaobject";
+import { NotFoundException } from "../exception/not-found-exception";
+import { UserErrorsException } from "../exception/user-errors-exception";
+import { MetaobjectBulkDeletePayload } from "~/types/admin.types";
+import { serializeMetaobject, serializeMetaobjectFields } from "../serializers/metaobject";
 
 /**
  * The object manager is the entry point to interact with metaobjects
@@ -74,16 +78,16 @@ export class ObjectManager {
   /**
    * Get a single object by ID or handle, or throw an error if not found
    */
-  async findOneOrFail<T>(ctor: Constructor<T>, id: MetaobjectGid, options?: FindOneOptions): Promise<ManagedMetaobject<T> | null>;
-  async findOneOrFail<T>(ctor: Constructor<T>, handle: string, options?: FindOneOptions): Promise<ManagedMetaobject<T> | null>;
-  async findOneOrFail<T>(ctor: Constructor<T>, identifier: string, options?: FindOneOptions): Promise<ManagedMetaobject<T> | null> {
+  async findOneOrFail<T>(ctor: Constructor<T>, id: MetaobjectGid, options?: FindOneOptions): Promise<ManagedMetaobject<T>>;
+  async findOneOrFail<T>(ctor: Constructor<T>, handle: string, options?: FindOneOptions): Promise<ManagedMetaobject<T>>;
+  async findOneOrFail<T>(ctor: Constructor<T>, identifier: string, options?: FindOneOptions): Promise<ManagedMetaobject<T>> {
     this.validateClient();
 
     const object = await this.findOne<T>(ctor, identifier);
 
     if (!object) {
       const classMetadata = classMetadataFactory.getMetadataFor(ctor) as MetaobjectClassMetadata;
-      throw new Error(`No object of name "${classMetadata.name}" could be found with the identifier "${identifier}".`);
+      throw new NotFoundException(`No object of name "${classMetadata.name}" could be found with the identifier "${identifier}".`);
     }
 
     return object;
@@ -137,6 +141,29 @@ export class ObjectManager {
   async delete<T>(ctor: Constructor<T>, object: ManagedMetaobject<T>): Promise<MetaobjectGid>;
   async delete<T>(ctor: Constructor<T>, objectOrId: (MetaobjectGid | ManagedMetaobject<T>)): Promise<MetaobjectGid> {
     this.validateClient();
+
+    if (!objectOrId) {
+      throw new Error('The object to be deleted is null or undefined.');
+    }
+
+    const builder = QueryBuilder.mutation('DeleteMetaobject')
+      .variables({ id: 'ID!' })
+      .operation<MetaobjectDeletePayload>('metaobjectDelete', { id: '$id' }, (metaobject) => {
+        metaobject
+          .fields('deletedId')
+          .object('userErrors', (userErrors) => {
+            userErrors.fields('code', 'field', 'message');
+          });
+      });
+
+    const variables = { id: typeof objectOrId === 'string' ? objectOrId : objectOrId.system.id };
+    const { deletedId, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectDelete;
+
+    if (userErrors.length > 0) {
+      throw new UserErrorsException(userErrors);
+    }
+
+    return deletedId;
   }
 
   /**
@@ -146,15 +173,77 @@ export class ObjectManager {
   async deleteMany<T>(ctor: Constructor<T>, objects: ManagedMetaobject<T>[]): Promise<Job>;
   async deleteMany<T>(ctor: Constructor<T>, objectsOrIds: (MetaobjectGid[] | ManagedMetaobject<T>[])): Promise<Job> {
     this.validateClient();
+
+    const builder = QueryBuilder.mutation('DeleteMetaobjects')
+      .variables({ where: 'MetaobjectBulkDeleteWhereCondition!' })
+      .operation<MetaobjectBulkDeletePayload>('metaobjectBulkDelete', { where: '$where' }, (job) => {
+        job
+          .object('job', (job) => {
+            job.fields('id', 'done')
+          })
+          .object('userErrors', (userErrors) => {
+            userErrors.fields('code', 'field', 'message');
+          });
+      });
+
+    const variables = {
+      where: {
+        ids: typeof objectsOrIds[0] === 'string' ? objectsOrIds : objectsOrIds.map(object => object.system.id)
+      }
+    }
+    
+    const { job, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectBulkDelete;
+
+    if (userErrors.length > 0) {
+      throw new UserErrorsException(userErrors);
+    }
+
+    return job;
   }
 
   /**
    * Create a single object, or optionally pass a handle
    */
-  async create<T>(ctor: Constructor<T>, input: MetaobjectCreateInput<T>): Promise<ManagedMetaobject<T>>
-  async create<T>(ctor: Constructor<T>, object: T): Promise<ManagedMetaobject<T>>
-  async create<T>(ctor: Constructor<T>, objectOrInput: T | MetaobjectCreateInput<T>): Promise<ManagedMetaobject<T>> {
+  async create<T>(ctor: Constructor<T>, input: MetaobjectCreateInput<T>, options?: CreateOptions): Promise<ManagedMetaobject<T>>
+  async create<T>(ctor: Constructor<T>, object: T, options?: CreateOptions): Promise<ManagedMetaobject<T>>
+  async create<T>(ctor: Constructor<T>, objectOrInput: T | MetaobjectCreateInput<T>, options?: CreateOptions): Promise<ManagedMetaobject<T>> {
     this.validateClient();
+
+    const classMetadata = classMetadataFactory.getMetadataFor(ctor) as MetaobjectClassMetadata;
+
+    const builder = QueryBuilder.mutation('CreateMetaobject')
+      .variables({ metaobject: 'MetaobjectCreateInput!' })
+      .fragment<Metaobject>('BaseMetaobjectFields', 'Metaobject', (fragment) => {
+        this.setupMetaobjectFragment(fragment);
+      })
+      .operation<MetaobjectCreatePayload>('metaobjectCreate', { metaobject: '$metaobject' }, (metaobjectCreate) => {
+        metaobjectCreate
+          .object('metaobject', (metaobject) => {
+            this.setupMetaobjectQuery(ctor, metaobject, options?.populate || []);
+          })
+          .object('userErrors', (userErrors) => {
+            userErrors.fields('code', 'field', 'message');
+          });
+      });
+
+    const variables = {
+      metaobject: {
+        type: classMetadata.type,
+        fields: serializeMetaobjectFields(ctor, objectOrInput && typeof objectOrInput === 'object' && 'handle' in objectOrInput ? objectOrInput.object : objectOrInput),
+        handle: objectOrInput && typeof objectOrInput === 'object' && 'handle' in objectOrInput ? objectOrInput.handle : undefined,
+      }
+    };
+
+    const { metaobject, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectCreate;
+
+    if (userErrors.length > 0) {
+      throw new UserErrorsException(userErrors);
+    }
+
+    const managedObject = hydrateMetaobject(ctor, metaobject);
+    Object.assign(objectOrInput, managedObject);
+
+    return managedObject;
   }
 
   /**
@@ -260,19 +349,23 @@ export class ObjectManager {
       }
 
       if (fieldDefinition.list) {
-        field.connection('references', { first: 50 }, (connection) => {
-          connection.object('nodes', (nodes) => {
-            nodes.inlineFragment(resourceName, (fragment) => {
-              setupFragment(fragment);
-            })
+        field
+          .fields('jsonValue')
+          .connection('references', { first: 50 }, (connection) => {
+            connection.object('nodes', (nodes) => {
+              nodes.inlineFragment(resourceName, (fragment) => {
+                setupFragment(fragment);
+              })
+            });
           });
-        })
       } else {
-        field.object('reference', (reference) => {
-          reference.inlineFragment(resourceName, (fragment) => {
-            setupFragment(fragment);
+        field
+          .fields('jsonValue')
+          .object('reference', (reference) => {
+            reference.inlineFragment(resourceName, (fragment) => {
+              setupFragment(fragment);
+            });
           });
-        });
       }
     })
   }

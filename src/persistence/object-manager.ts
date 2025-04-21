@@ -2,14 +2,14 @@ import { AdminGraphqlClient } from "@shopify/shopify-app-remix/server";
 import { classMetadataFactory } from "../class-metadata-factory";
 import { Constructor, FieldDefinition, MetaobjectClassMetadata } from "../types";
 import { ObjectRepository } from "./object-repository";
-import { FindOptions, Job, ManagedMetaobject, MetaobjectGid, MetaobjectCreateInput, MetaobjectUpsertInput, FindOneOptions, CreateOptions } from "./types";
+import { FindOptions, Job, ManagedMetaobject, MetaobjectGid, FindOneOptions, CreateOptions } from "./types";
 import { FieldBuilder, QueryBuilder } from "raku-ql";
-import { Metaobject, MetaobjectCreatePayload, MetaobjectDeletePayload, PageInfo } from "../types/admin.types";
+import { Metaobject, MetaobjectStatus, MetaobjectCreatePayload, MetaobjectUpdatePayload, MetaobjectDeletePayload, PageInfo } from "../types/admin.types";
 import { hydrateMetaobject } from "../hydrators/metaobject";
 import { NotFoundException } from "../exception/not-found-exception";
 import { UserErrorsException } from "../exception/user-errors-exception";
-import { MetaobjectBulkDeletePayload } from "~/types/admin.types";
-import { serializeMetaobject, serializeMetaobjectFields } from "../serializers/metaobject";
+import { MetaobjectBulkDeletePayload, MetaobjectsCreatePayload, MetaobjectUpsertPayload } from "../types/admin.types";
+import { serializeMetaobjectFields } from "../serializers/metaobject";
 
 /**
  * The object manager is the entry point to interact with metaobjects
@@ -68,11 +68,11 @@ export class ObjectManager {
       });
 
     const classMetadata = classMetadataFactory.getMetadataFor(ctor) as MetaobjectClassMetadata;
-    const variables = fetchById ? { identifier } : { identifier: { handle: identifier, type: classMetadata.type } };
+    const variables = fetchById ? { identifier } : { identifier: { handle: identifier, type: classMetadata.definition.type } };
 
     const { metaobject } = (await (await this.client(builder.build(), { variables })).json()).data;
 
-    return metaobject ? hydrateMetaobject(ctor, metaobject) : null;
+    return metaobject ? hydrateMetaobject(ctor, new ctor(), metaobject) : null;
   }
 
   /**
@@ -83,11 +83,11 @@ export class ObjectManager {
   async findOneOrFail<T>(ctor: Constructor<T>, identifier: string, options?: FindOneOptions): Promise<ManagedMetaobject<T>> {
     this.validateClient();
 
-    const object = await this.findOne<T>(ctor, identifier);
+    const object = await this.findOne<T>(ctor, identifier, options);
 
     if (!object) {
       const classMetadata = classMetadataFactory.getMetadataFor(ctor) as MetaobjectClassMetadata;
-      throw new NotFoundException(`No object of name "${classMetadata.name}" could be found with the identifier "${identifier}".`);
+      throw new NotFoundException(`No object of name "${classMetadata.definition.name}" could be found with the identifier "${identifier}".`);
     }
 
     return object;
@@ -102,7 +102,7 @@ export class ObjectManager {
     const classMetadata = classMetadataFactory.getMetadataFor(ctor) as MetaobjectClassMetadata;
 
     const connectionParameters = {
-      type: classMetadata.type,
+      type: classMetadata.definition.type,
       first: ('after' in options) ? (options.first || 50) : undefined,
       last: ('before' in options) ? (options.last || 50) : undefined,
       after: options.after,
@@ -130,7 +130,7 @@ export class ObjectManager {
 
     return {
       pageInfo,
-      items: nodes.map((metaobject: Metaobject) => hydrateMetaobject(ctor, metaobject))
+      items: nodes.map((metaobject: Metaobject) => hydrateMetaobject(ctor, new ctor(), metaobject))
     }
   }
 
@@ -142,10 +142,6 @@ export class ObjectManager {
   async delete<T>(ctor: Constructor<T>, objectOrId: (MetaobjectGid | ManagedMetaobject<T>)): Promise<MetaobjectGid> {
     this.validateClient();
 
-    if (!objectOrId) {
-      throw new Error('The object to be deleted is null or undefined.');
-    }
-
     const builder = QueryBuilder.mutation('DeleteMetaobject')
       .variables({ id: 'ID!' })
       .operation<MetaobjectDeletePayload>('metaobjectDelete', { id: '$id' }, (metaobject) => {
@@ -156,7 +152,10 @@ export class ObjectManager {
           });
       });
 
-    const variables = { id: typeof objectOrId === 'string' ? objectOrId : objectOrId.system.id };
+
+    const classMetadata = classMetadataFactory.getMetadataFor(ctor) as MetaobjectClassMetadata;
+
+    const variables = { id: typeof objectOrId === 'string' ? objectOrId : objectOrId[classMetadata.id.propertyName] };
     const { deletedId, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectDelete;
 
     if (userErrors.length > 0) {
@@ -186,9 +185,11 @@ export class ObjectManager {
           });
       });
 
+    const classMetadata = classMetadataFactory.getMetadataFor(ctor) as MetaobjectClassMetadata;
+
     const variables = {
       where: {
-        ids: typeof objectsOrIds[0] === 'string' ? objectsOrIds : objectsOrIds.map(object => object.system.id)
+        ids: typeof objectsOrIds[0] === 'string' ? objectsOrIds : objectsOrIds.map(object => object[classMetadata.id.propertyName]),
       }
     }
     
@@ -202,11 +203,9 @@ export class ObjectManager {
   }
 
   /**
-   * Create a single object, or optionally pass a handle
+   * Create a single object
    */
-  async create<T>(ctor: Constructor<T>, input: MetaobjectCreateInput<T>, options?: CreateOptions): Promise<ManagedMetaobject<T>>
-  async create<T>(ctor: Constructor<T>, object: T, options?: CreateOptions): Promise<ManagedMetaobject<T>>
-  async create<T>(ctor: Constructor<T>, objectOrInput: T | MetaobjectCreateInput<T>, options?: CreateOptions): Promise<ManagedMetaobject<T>> {
+  async create<T>(ctor: Constructor<T>, object: T, options?: CreateOptions): Promise<ManagedMetaobject<T>> {
     this.validateClient();
 
     const classMetadata = classMetadataFactory.getMetadataFor(ctor) as MetaobjectClassMetadata;
@@ -228,9 +227,13 @@ export class ObjectManager {
 
     const variables = {
       metaobject: {
-        type: classMetadata.type,
-        fields: serializeMetaobjectFields(ctor, objectOrInput && typeof objectOrInput === 'object' && 'handle' in objectOrInput ? objectOrInput.object : objectOrInput),
-        handle: objectOrInput && typeof objectOrInput === 'object' && 'handle' in objectOrInput ? objectOrInput.handle : undefined,
+        type: classMetadata.definition.type,
+        fields: serializeMetaobjectFields(ctor, object),
+        handle: object[classMetadata.handle.propertyName],
+        capabilities: {
+          publishable: { status: object[classMetadata?.capabilities.find(capabilityField => capabilityField.capability === 'publishable')?.propertyName] ?? MetaobjectStatus.Active },
+          onlineStore: object[classMetadata?.capabilities.find(capabilityField => capabilityField.capability === 'onlineStore')?.propertyName] ?? undefined
+        }
       }
     };
 
@@ -240,35 +243,147 @@ export class ObjectManager {
       throw new UserErrorsException(userErrors);
     }
 
-    const managedObject = hydrateMetaobject(ctor, metaobject);
-    Object.assign(objectOrInput, managedObject);
-
-    return managedObject;
+    return hydrateMetaobject(ctor, object, metaobject);
   }
 
   /**
    * Create multiple objects, or optionally pass an handle
    */
-  async createMany<T>(ctor: Constructor<T>, input: MetaobjectCreateInput<T>[]): Promise<ManagedMetaobject<T>[]>
-  async createMany<T>(ctor: Constructor<T>, objects: T[]): Promise<ManagedMetaobject<T>[]>
-  async createMany<T>(ctor: Constructor<T>, objectsOrInputs: T[] | MetaobjectCreateInput<T>[]): Promise<ManagedMetaobject<T>[]> {
+  async createMany<T>(ctor: Constructor<T>, objects: T[], options?: CreateOptions): Promise<ManagedMetaobject<T>[]> {
     this.validateClient();
+
+    const classMetadata = classMetadataFactory.getMetadataFor(ctor) as MetaobjectClassMetadata;
+
+    const builder = QueryBuilder.mutation('CreateMetaobjects')
+      .variables({ input: 'MetaobjectsCreateInput!' })
+      .fragment<Metaobject>('BaseMetaobjectFields', 'Metaobject', (fragment) => {
+        this.setupMetaobjectFragment(fragment);
+      })
+      .operation<MetaobjectsCreatePayload>('metaobjectsCreate', { input: '$input' }, (metaobjectsCreate) => {
+        metaobjectsCreate
+          .object('metaobjects', (metaobjects) => {
+            this.setupMetaobjectQuery(ctor, metaobjects, options?.populate || []);
+          })
+          .object('userErrors', (userErrors) => {
+            userErrors.fields('code', 'field', 'message');
+          });
+      });
+
+    const variables = {
+      input: {
+        metaobjects: objects.map((object) => {
+          return {
+            fields: serializeMetaobjectFields(ctor, object),
+            handle: object[classMetadata.handle.propertyName],
+            capabilities: {
+              publishable: { status: object[classMetadata?.capabilities.find(capabilityField => capabilityField.capability === 'publishable')?.propertyName] ?? MetaobjectStatus.Active },
+              onlineStore: object[classMetadata?.capabilities.find(capabilityField => capabilityField.capability === 'onlineStore')?.propertyName] ?? undefined
+            }
+          }
+        }),
+        type: classMetadata.definition.type,
+      }
+    };
+
+    const { metaobjects, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectsCreate;
+
+    if (userErrors.length > 0) {
+      throw new UserErrorsException(userErrors);
+    }
+
+    return metaobjects.map((metaobject: Metaobject, index: number) => {
+      return hydrateMetaobject(ctor, objects[index], metaobject);
+    });
   }
 
   /**
    * Upsert a given object. When upserting an object directly, this must be a managed object
    */
-  async upsert<T>(ctor: Constructor<T>, input: MetaobjectUpsertInput<T>[]): Promise<ManagedMetaobject<T>>
-  async upsert<T>(ctor: Constructor<T>, object: ManagedMetaobject<T>): Promise<ManagedMetaobject<T>>
-  async upsert<T>(ctor: Constructor<T>, objectOrInput: ManagedMetaobject<T> | MetaobjectUpsertInput<T>): Promise<ManagedMetaobject<T>> {
+  async upsert<T>(ctor: Constructor<T>, object: T, options?: CreateOptions): Promise<ManagedMetaobject<T>> {
     this.validateClient();
+
+    const classMetadata = classMetadataFactory.getMetadataFor(ctor) as MetaobjectClassMetadata;
+
+    const builder = QueryBuilder.mutation('UpsertMetaobject')
+      .variables({ handle: 'MetaobjectHandleInput!', metaobject: 'MetaobjectUpsertInput!' })
+      .fragment<Metaobject>('BaseMetaobjectFields', 'Metaobject', (fragment) => {
+        this.setupMetaobjectFragment(fragment);
+      })
+      .operation<MetaobjectUpsertPayload>('metaobjectUpsert', { handle: '$handle', metaobject: '$metaobject' }, (metaobjectUpsert) => {
+        metaobjectUpsert
+          .object('metaobject', (metaobject) => {
+            this.setupMetaobjectQuery(ctor, metaobject, options?.populate || []);
+          })
+          .object('userErrors', (userErrors) => {
+            userErrors.fields('code', 'field', 'message');
+          });
+      });
+
+    const variables = {
+      handle: {
+        handle: object[classMetadata.handle.propertyName],
+        type: classMetadata.definition.type
+      },
+      metaobject: {
+        fields: serializeMetaobjectFields(ctor, object),
+        capabilities: {
+          publishable: { status: object[classMetadata?.capabilities.find(capabilityField => capabilityField.capability === 'publishable')?.propertyName] ?? MetaobjectStatus.Active },
+          onlineStore: object[classMetadata?.capabilities.find(capabilityField => capabilityField.capability === 'onlineStore')?.propertyName] ?? undefined
+        }
+      }
+    };
+
+    const { metaobject, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectUpsert;
+
+    if (userErrors.length > 0) {
+      throw new UserErrorsException(userErrors);
+    }
+
+    return hydrateMetaobject(ctor, object, metaobject);
   }
 
   /**
    * Update a given object. Only managed objects can be updated
    */
-  async update<T>(ctor: Constructor<T>, object: ManagedMetaobject<T>): Promise<ManagedMetaobject<T>> {
+  async update<T>(ctor: Constructor<T>, object: ManagedMetaobject<T>, options?: CreateOptions): Promise<ManagedMetaobject<T>> {
     this.validateClient();
+
+    const classMetadata = classMetadataFactory.getMetadataFor(ctor) as MetaobjectClassMetadata;
+
+    const builder = QueryBuilder.mutation('UpdateMetaobject')
+      .variables({ id: 'ID!', metaobject: 'MetaobjectUpdateInput!' })
+      .fragment<Metaobject>('BaseMetaobjectFields', 'Metaobject', (fragment) => {
+        this.setupMetaobjectFragment(fragment);
+      })
+      .operation<MetaobjectUpdatePayload>('metaobjectUpdate', { id: '$id', metaobject: '$metaobject' }, (metaobjectUpdate) => {
+        metaobjectUpdate
+          .object('metaobject', (metaobject) => {
+            this.setupMetaobjectQuery(ctor, metaobject, options?.populate || []);
+          })
+          .object('userErrors', (userErrors) => {
+            userErrors.fields('code', 'field', 'message');
+          });
+      });
+
+    const variables = {
+      id: object[classMetadata.id.propertyName],
+      metaobject: {
+        fields: serializeMetaobjectFields(ctor, object),
+        handle: object[classMetadata.handle.propertyName],
+        capabilities: {
+          publishable: { status: object[classMetadata?.capabilities.find(capabilityField => capabilityField.capability === 'publishable')?.propertyName] ?? MetaobjectStatus.Active },
+          onlineStore: object[classMetadata?.capabilities.find(capabilityField => capabilityField.capability === 'onlineStore')?.propertyName] ?? undefined
+        }
+      }
+    };
+
+    const { metaobject, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectUpdate;
+
+    if (userErrors.length > 0) {
+      throw new UserErrorsException(userErrors);
+    }
+
+    return hydrateMetaobject(ctor, object, metaobject);
   }
 
   /**
@@ -286,6 +401,15 @@ export class ObjectManager {
       .fields('id', 'handle', 'createdAt', 'updatedAt', 'displayName')
       .object('fields', (fields) => {
         fields.fields('key', 'jsonValue')
+      })
+      .object('capabilities', (capabilities) => {
+        capabilities
+          .object('publishable', (publishable) => {
+            publishable.fields('status');
+          })
+          .object('onlineStore', (onlineStore) => {
+            onlineStore.fields('templateSuffix')
+          })
       })
       .object('thumbnailField', (thumbnailField) => {
         thumbnailField.object('thumbnail', (thumbnail) => {

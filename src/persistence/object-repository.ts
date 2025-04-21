@@ -1,7 +1,7 @@
 import { Constructor } from "../types";
 import { PageInfo } from "../types/admin.types";
 import { ObjectManager } from "./object-manager";
-import { FindOptions, ManagedMetaobject, MetaobjectGid, MetaobjectCreateInput, Job, CreateOptions } from "./types";
+import { FindOptions, ManagedMetaobject, MetaobjectGid, Job, CreateOptions } from "./types";
 
 /**
  * An object repository allows to interact with metaobjects of a single type. It makes it less verbose to interact with
@@ -49,7 +49,11 @@ export class ObjectRepository<T> {
   async delete(id: MetaobjectGid): Promise<MetaobjectGid>;
   async delete(object: ManagedMetaobject<T>): Promise<MetaobjectGid>;
   async delete(objectOrId: (MetaobjectGid | ManagedMetaobject<T>)): Promise<MetaobjectGid> {
-    return this.objectManager.delete<T>(this.ctor, objectOrId);
+    if (typeof objectOrId === 'string') {
+      return this.objectManager.delete<T>(this.ctor, objectOrId as MetaobjectGid);
+    } else {
+      return this.objectManager.delete<T>(this.ctor, objectOrId as ManagedMetaobject<T>);
+    }
   }
 
   /**
@@ -58,40 +62,38 @@ export class ObjectRepository<T> {
   async deleteMany(ids: MetaobjectGid[]): Promise<Job>;
   async deleteMany(objects: ManagedMetaobject<T>[]): Promise<Job>;
   async deleteMany(objectsOrIds: (MetaobjectGid[] | ManagedMetaobject<T>[])): Promise<Job> {
-    return this.objectManager.deleteMany<T>(this.ctor, objectsOrIds);
+    if (typeof objectsOrIds[0] === 'string') {
+      return this.objectManager.deleteMany<T>(this.ctor, objectsOrIds as MetaobjectGid[]);
+    } else {
+      return this.objectManager.deleteMany<T>(this.ctor, objectsOrIds as ManagedMetaobject<T>[]);
+    }
   }
 
   /**
    * Create a single object, or optionally pass an option
    */
-  async create(ctor: Constructor<T>, input: MetaobjectCreateInput<T>, options?: CreateOptions): Promise<ManagedMetaobject<T>>
-  async create(ctor: Constructor<T>, object: T, options?: CreateOptions): Promise<ManagedMetaobject<T>>
-  async create(ctor: Constructor<T>, objectOrInput: T | MetaobjectCreateInput<T>, options?: CreateOptions): Promise<ManagedMetaobject<T>> {
-    return this.objectManager.create<T>(this.ctor, objectOrInput, options);
+  async create(object: T, options?: CreateOptions): Promise<ManagedMetaobject<T>> {
+    return this.objectManager.create<T>(this.ctor, object, options);
   }
 
   /**
    * Create multiple objects, or optionally pass an handle
    */
-  async createMany(input: MetaobjectCreateInput<T>[]): Promise<ManagedMetaobject<T>[]>
-  async createMany(objects: T[]): Promise<ManagedMetaobject<T>[]>
-  async createMany(objectsOrInputs: T[] | MetaobjectCreateInput<T>[]): Promise<ManagedMetaobject<T>[]> {
-
+  async createMany(objects: T[], options?: CreateOptions): Promise<ManagedMetaobject<T>[]> {
+    return this.objectManager.createMany<T>(this.ctor, objects, options);
   }
 
   /**
    * Upsert a given object. When upserting an object directly, this must be a managed object
    */
-  async upsert(input: MetaobjectUpsertInput<T>[]): Promise<ManagedMetaobject<T>>
-  async upsert(object: ManagedMetaobject<T>): Promise<ManagedMetaobject<T>>
-  async upsert(objectOrInput: ManagedMetaobject<T> | MetaobjectUpsertInput<T>): Promise<ManagedMetaobject<T>> {
-
+  async upsert(object: T, options?: CreateOptions): Promise<ManagedMetaobject<T>> {
+    return this.objectManager.upsert<T>(this.ctor, object, options);
   }
 
   /**
    * Update a given object. Only managed objects can be updated
    */
   async update(object: ManagedMetaobject<T>): Promise<ManagedMetaobject<T>> {
-
+    return this.objectManager.update<T>(this.ctor, object);
   }
 }

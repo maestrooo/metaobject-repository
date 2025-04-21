@@ -1,4 +1,5 @@
-import { Constructor, EmbeddableClassMetadata, FieldDefinition, FieldEmbeddedDefinition, MetaobjectAccess, MetaobjectCapabilities, MetaobjectClassMetadata } from "../types";
+import { MetaobjectCapabilities, MetaobjectAdminAccess, MetaobjectStorefrontAccess } from "../types/admin.types";
+import { Constructor, EmbeddableClassMetadata, FieldDefinition, FieldEmbeddedDefinition, MetaobjectClassMetadata } from "../types";
 import { ObjectRepository } from "../persistence/object-repository";
 
 Symbol.metadata ??= Symbol('Symbol.metadata'); // Shim metadata
@@ -7,8 +8,11 @@ type DecoratorMetaobjectOptions = {
   type: string;
   name: string;
   description?: string;
-  capabilities?: MetaobjectCapabilities;
-  access?: MetaobjectAccess;
+  capabilities?: Partial<MetaobjectCapabilities>;
+  access?: {
+    admin?: MetaobjectAdminAccess | `${MetaobjectAdminAccess}`;
+    storefront?: MetaobjectStorefrontAccess | `${MetaobjectStorefrontAccess}`
+  }
   repositoryClass?: Constructor<ObjectRepository<any>>;
 }
 
@@ -16,6 +20,10 @@ export function Metaobject(options: DecoratorMetaobjectOptions) {
   return (target: new (...args: any[]) => any, context: ClassDecoratorContext) => {
     if (context.kind !== 'class') {
       throw new Error('@Metaobject() can only be used as a class decorator');
+    }
+
+    if (!context.metadata.classMetadata.handle || !context.metadata.classMetadata.id) {
+      throw new Error(`@Metaobject() requires a @Handle() and an @Id() field decorator`);
     }
 
     context.addInitializer(function() {
@@ -33,19 +41,15 @@ export function Metaobject(options: DecoratorMetaobjectOptions) {
       });
     })
 
-    let classMetadata: MetaobjectClassMetadata = {
-      kind: 'metaobject',
+    context.metadata.classMetadata.kind = 'metaobject';
+    context.metadata.classMetadata.repositoryClass = options.repositoryClass;
+    context.metadata.classMetadata.definition = {
       type: options.type,
       name: options.name,
       description: options.description ?? '',
-      access: { admin: 'MERCHANT_READ', storefront: 'PUBLIC_READ', ...options.access },
-      capabilities: { publishable: { enabled: true }, translatable: { enabled: false }, ...options.capabilities },
-      repositoryClass: options.repositoryClass,
-      fields: context.metadata.parsedFields as FieldDefinition[]
+      access: { admin: MetaobjectAdminAccess.MerchantRead, storefront: MetaobjectStorefrontAccess.PublicRead, ...options.access },
+      capabilities: { publishable: { enabled: true }, translatable: { enabled: false }, ...options.capabilities }
     }
-
-    context.metadata.classMetadata = classMetadata;
-    delete context.metadata.parsedFields; // It's already processed and incorporated into the metadata
   }
 }
 

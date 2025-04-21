@@ -5,8 +5,6 @@ import { ClassMetadata } from "./types";
  * with the metaobject API.
  */
 class ClassMetadataFactory {
-  private classMetadataMap = new WeakMap<DecoratorMetadata, ClassMetadata>();
-
   /**
    * This get a metadata (if it exists) or create a new one. Please note that due to how decorators work, this
    * return a resolver AND a promise that resolve to a class metadata

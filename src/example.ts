@@ -1,6 +1,8 @@
+import { Capability } from "./decorators/capability";
 import { Embeddable } from "./decorators/embeddable";
 import { Field } from "./decorators/field";
 import { Metaobject } from "./decorators/metaobject";
+import { MetaobjectStatus, MetaobjectStorefrontAccess } from "./types/admin.types";
 
 @Embeddable({ schema: { foo: 'baz' } })
 export class Emb {
@@ -23,11 +25,14 @@ export class Instructor {
   type: '$app:example',
   name: 'Example',
   capabilities: { publishable: { enabled: false } },
-  access: { storefront: 'NONE' }
+  access: { admin: "MERCHANT_READ", storefront: "DD" },
 })
 export class Example {
   @Field({ type: 'single_line_text_field', list: true, required: true, validations: { maxLength: 10 } })
   allowProperty?: string;
+
+  @Capability("onlineStore")
+  status?: MetaobjectStatus;
 
   @Field({ type: 'single_line_text_field', list: true, required: true, validations: { maxLength: 10 } })
   foo?: string;

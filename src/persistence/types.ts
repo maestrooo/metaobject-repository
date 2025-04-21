@@ -13,8 +13,6 @@ export type MetaobjectThumbnail = {
 }
 
 export type MetaobjectSystemData = {
-  id: MetaobjectGid;
-  handle: string;
   createdAt: Date;
   updatedAt: Date;
   displayName: string;

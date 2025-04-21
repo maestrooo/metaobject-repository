@@ -1,4 +1,5 @@
 {
+  "include": ["types"],
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",

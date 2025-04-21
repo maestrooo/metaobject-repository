@@ -64,6 +64,8 @@ type DecoratorFieldOptions =
 
 export function Field(options: DecoratorFieldOptions) {
   return (target: undefined, context: ClassFieldDecoratorContext) => {
+    context.metadata.classMetadata ??= {};
+
     if (context.kind !== 'field') {
       throw new Error('@Field() can only be used as a field decorator');
     }
@@ -72,7 +74,7 @@ export function Field(options: DecoratorFieldOptions) {
       throw new Error(`Field key "system" is reserved and cannot be used. Use a different property or override the key.`);
     }
 
-    context.metadata.parsedFields ??= []; // Ensure that the metadata has a pending fields array
+    context.metadata.classMetadata.fields ??= []; // Ensure that the metadata has a pending fields array
 
     let field: FieldDefinition = {
       propertyName: context.name as string,
@@ -95,7 +97,7 @@ export function Field(options: DecoratorFieldOptions) {
       field = { ...field, type: options.type, isReference: options.type.endsWith('_reference') };
     }
 
-    (context.metadata.parsedFields as Array<FieldDefinition>).push(field);
+    context.metadata.classMetadata.fields.push(field);
   }
 }
 

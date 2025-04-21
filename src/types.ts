@@ -1,4 +1,5 @@
 import { ObjectRepository } from "./persistence/object-repository";
+import { MetaobjectAccess, MetaobjectCapabilities } from "./types/admin.types";
 
 export type Constructor<T = any> = new (...args: any[]) => T;
 
@@ -33,42 +34,21 @@ export type MetafieldDefinitionValidation = {
   value?: string;
 }
 
-export type MetaobjectCapabilities = {
-  publishable?: {
-    enabled: boolean
-  };
-  translatable?: {
-    enabled: boolean
-  };
-  renderable?: {
-    enabled: boolean;
-    data?: {
-      metaDescriptionKey?: string;
-      metaTitleKey?: string;
-    }
-  };
-  onlineStore?: {
-    enabled: boolean;
-    data?: {
-      urlHandle: string;
-      createRedirects?: boolean;
-    }
-  }
-}
-
-export type MetaobjectAccess = {
-  admin?: 'MERCHANT_READ' | 'MERCHANT_READ_WRITE';
-  storefront?: 'PUBLIC_READ' | 'NONE';
-}
-
-export type MetaobjectClassMetadata = {
-  kind: 'metaobject';
-  repositoryClass: Constructor<ObjectRepository<any>> | undefined;
+export type MetaobjectDefinition = {
   type: string;
   name: string;
   description: string;
   access: MetaobjectAccess;
   capabilities: MetaobjectCapabilities;
+}
+
+export type MetaobjectClassMetadata = {
+  kind: 'metaobject';
+  repositoryClass: Constructor<ObjectRepository<any>> | undefined;
+  definition: MetaobjectDefinition;
+  id: MappedProperty;
+  handle: MappedProperty;
+  capabilities: CapabilityProperty[];
   fields: FieldDefinition[];
 }
 
@@ -80,10 +60,17 @@ export type EmbeddableClassMetadata = {
 
 export type ClassMetadata = MetaobjectClassMetadata | EmbeddableClassMetadata;
 
+export type MappedProperty = {
+  propertyName: string;
+}
+
+export type CapabilityProperty = MappedProperty & {
+  capability: 'onlineStore' | 'publishable';
+}
+
 export type FieldDefinition = BaseFieldDefinition | FieldEmbeddedDefinition | FieldMetaobjectReferenceDefinition;
 
-export type BaseFieldDefinition = {
-  propertyName: string;
+export type BaseFieldDefinition = MappedProperty & {
   key: string;
   type: string;
   name: string;  

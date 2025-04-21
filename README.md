@@ -91,6 +91,9 @@ import { Metaobject, Field } from 'metaobject-orm/decorators';
   access: { admin: 'MERCHANT_READ', storefront: 'PUBLIC_READ' }
 })
 class Instructor {
+  @Handle()
+  handle: string;
+  
   @Field({ type: 'single_line_text_field' })
   firstName: string;
 

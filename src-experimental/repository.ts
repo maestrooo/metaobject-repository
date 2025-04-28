@@ -2,7 +2,7 @@
 /// 5) The ObjectRepository class
 
 import { Job, MetaobjectBulkDeleteWhereCondition } from "../src/types/admin.types";
-import { CreateInput, DefinitionsSchema, FromDefinition, UpdateInput, UpsertInput } from "./types";
+import { CreateInput, DefinitionsSchema, FindOptions, FromDefinition, UpdateInput, UpsertInput } from "./types";
 
 /// ──────────────────────────────────────────────────────────────────────
 export class ObjectRepository<
@@ -14,10 +14,37 @@ export class ObjectRepository<
     public readonly typeKey: K
   ) {}
 
-  find<P extends string = never>(
+  findById<P extends string = never>(
     id: string,
     opts?: { populate?: readonly P[] }
   ): Promise<FromDefinition<D, K, P>> {
+    const def = this.defs[this.typeKey];
+    // …at runtime you can inspect `def.fields` and use opts.populate…
+    throw new Error("Not implemented");
+  }
+
+  findByHandle<P extends string = never>(
+    handle: string,
+    opts?: { populate?: readonly P[] }
+  ): Promise<FromDefinition<D, K, P>> {
+    const def = this.defs[this.typeKey];
+    // …at runtime you can inspect `def.fields` and use opts.populate…
+    throw new Error("Not implemented");
+  }
+
+  findAll<P extends string = never>(
+    opts?: { populate?: readonly P[], limit?: number }
+  ): Promise<FromDefinition<D, K, P>> {
+    const { populate, limit = 250 } = opts ?? {};
+
+    const def = this.defs[this.typeKey];
+    // …at runtime you can inspect `def.fields` and use opts.populate…
+    throw new Error("Not implemented");
+  }
+
+  find<P extends string = never>(
+    opts: FindOptions & { populate?: readonly P[] }
+  ): Promise<FromDefinition<D, K, P>> {    
     const def = this.defs[this.typeKey];
     // …at runtime you can inspect `def.fields` and use opts.populate…
     throw new Error("Not implemented");

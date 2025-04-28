@@ -200,3 +200,37 @@ export type UpsertInput<
   /** The actual fields payload */
   fields: FieldsInput<D, K>;
 }
+
+// the extra query/sort params you always allow
+type SortKey = 'id' | 'type' | 'display_name' | 'updated_at';
+
+type CommonFindOptions = {
+  query?:   string;
+  reverse?: boolean;
+  sortKey?: SortKey;
+};
+
+// 1) forward pagination: “first” is required, you may pass “after”,
+//    and you must NOT pass “last” or “before”
+type ForwardFindOptions = CommonFindOptions & {
+  first:  number;
+  after?: string;
+
+  // explicitly ban these:
+  last?:   never;
+  before?: never;
+};
+
+// 2) backward pagination: “last” is required, you may pass “before”,
+//    and you must NOT pass “first” or “after”
+type BackwardFindOptions = CommonFindOptions & {
+  last:   number;
+  before?: string;
+
+  // explicitly ban these:
+  first?: never;
+  after?: never;
+};
+
+// Union forces “at least one of first|last” and applies the mutual-exclusion rules
+export type FindOptions = ForwardFindOptions | BackwardFindOptions;

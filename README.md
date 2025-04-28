@@ -631,9 +631,23 @@ await objectManager.withClient(admin.graphql).create(Instructor, { object: instr
 const workshop = new Workshop();
 workshop.instructor = instructor;
 await objectManager.withClient(admin.graphql).create(Workshop, { object: workshop });
-
+```
 
 ## TODO
 
 * Add a `wrap` utility (like Mikro ORM does) to create the proxy.
 * Add a `objectManager.newObject(Workshop, { values })`.
+
+
+
+```typescript
+export const definitions = [
+  {
+    type: "$app:test",
+    fields: [
+      { name: "Name", displayName: true },
+      { name: "Icon", type: "file_reference" }
+    ]
+  }
+]
+```

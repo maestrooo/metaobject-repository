@@ -2,6 +2,7 @@
 // File: definitions.ts
 // ────────────────────────────────────────────────────────────────────────
 
+import { MetaobjectStorefrontAccess } from "../src/types/admin.types";
 import { DefinitionsSchema } from "./types";
 
 /**
@@ -13,6 +14,15 @@ import { DefinitionsSchema } from "./types";
 export const definitions = {
   Another: {
     type: "$app:bar",
+    access: { 
+      storefront: MetaobjectStorefrontAccess.None 
+    },
+    capabilities: {
+      onlineStore: { enabled: true, data: { canCreateRedirects: true, urlHandle: 'test' }},
+      renderable: { enabled: true, data: { metaDescriptionKey: 'foo', metaTitleKey: 'bar' }},
+      translatable: { enabled: true },
+      publishable: { enabled: true }
+    },
     fields: [
       { name: "name", type: "single_line_text_field", validations: { maxLength: 34 } },
     ],
@@ -20,7 +30,7 @@ export const definitions = {
   StoreType: {
     type: "$app:baz",
     fields: [
-      { name: "name",        type: "single_line_text_field" },
+      { name: "name",        type: "single_line_text_field", required: true },
       {
         name:        "icon",
         type:        "file_reference",
@@ -36,8 +46,11 @@ export const definitions = {
   },
   Test: {
     type: "$app:test",
+    capabilities: { 
+      publishable: { enabled: true }
+    },
     fields: [
-      { name:       "name",        type: "single_line_text_field" },
+      { name:       "name",        type: "single_line_text_field", required: true },
       {
         name:        "icon",
         type:        "file_reference",

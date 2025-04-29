@@ -2,8 +2,8 @@
 // File: definitions.ts
 // ────────────────────────────────────────────────────────────────────────
 
-import { MetaobjectStorefrontAccess } from "../src/types/admin.types";
-import { DefinitionsSchema } from "./types";
+import { DefinitionsSchema } from "./src-experimental/types/definitions";
+import { MetaobjectStorefrontAccess } from "./src/types/admin.types";
 
 /**
  * Your “definitions” object, living wherever your user puts it.
@@ -57,6 +57,7 @@ export const definitions = {
         validations: { fileTypes: ["Image","Video"] },
       },
       { name:       "generic_obj", type: "metaobject_reference" },
+      { name:       "products", type: "list.product_reference" },
       {
         name:         "store_type",
         type:         "metaobject_reference",

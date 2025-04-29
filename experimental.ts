@@ -1,15 +1,17 @@
-import { definitions, Definitions } from "./src-experimental/definitions";
-import { ObjectRepository } from "./src-experimental/repository";
+import { definitions, Definitions } from "./definitions";
+import { ObjectRepository } from "./src-experimental/object-repository";
+import { FromDefinition } from "./src-experimental/types/definitions";
 
 // create a repository for your “Test” metaobject
 const repo = new ObjectRepository<Definitions, "Test">(definitions, "Test");
 
 // 1) everything as plain strings
 const plain = await repo.findById("123");
+type Foo = typeof plain;
 // type of `plain.icon` is string
 
 // 2) populate only `icon` (uses validations to pick Image|Video|…)
-const withIcon = await repo.findById("123", { populate: ["icon"] });
+const withIcon = await repo.findById("123", { populate: ["icon", "products"] });
 // type of `withIcon.icon` is Image | Video (per validations in definitions)
 
 // 3) populate a nested metaobject_reference
@@ -18,10 +20,14 @@ const deep = await repo.findById("123", { populate: ["store_type.another"] });
 
 // 4) mix-and-match
 const mix = await repo.findById("123", {
-  populate: ["icon", "store_type", "store_type.another"],
+  populate: ["icon", "store_type", "store_type.another", "products" ],
 });
 
-let cc = await repo.find({ first: 10, sortKey: 'display_name', populate: ['icon'], query: 'test' });
+mix.products.forEach((product) => {
+  
+});
+
+let { pageInfo, items } = await repo.find({ first: 10, sortKey: 'display_name', populate: ['icon'], query: 'test' });
 
 let u = await repo.create({ handle: '123', capabilities: { publishable: { enabled: true } }, fields: { name: 'fff', icon: '123' } }, { populate: ['icon'] });
 

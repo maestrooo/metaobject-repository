@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/maestrooo/metaobject-orm#readme",
   "dependencies": {
-    "raku-ql": "^1.2.0",
+    "raku-ql": "^1.2.5",
     "snake-camel": "^1.0.9"
   },
   "devDependencies": {

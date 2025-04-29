@@ -1,26 +1,32 @@
 import { definitions, Definitions } from "./definitions";
-import { ObjectRepository } from "./src-experimental/object-repository";
-import { FromDefinition } from "./src-experimental/types/definitions";
+import { ObjectRepository } from "./src/object-repository";
+import { CreateInput } from "./src/types/repository";
 
 // create a repository for your “Test” metaobject
-const repo = new ObjectRepository<Definitions, "Test">(definitions, "Test");
+const repo = new ObjectRepository<Definitions, "$app:test">(definitions, "$app:test");
 
 // 1) everything as plain strings
 const plain = await repo.findById("123");
-type Foo = typeof plain;
+plain.icon;
 // type of `plain.icon` is string
 
 // 2) populate only `icon` (uses validations to pick Image|Video|…)
-const withIcon = await repo.findById("123", { populate: ["icon", "products"] });
+const withIcon = await repo.findById("123", { populate: ["icon"] });
 // type of `withIcon.icon` is Image | Video (per validations in definitions)
 
-// 3) populate a nested metaobject_reference
-const deep = await repo.findById("123", { populate: ["store_type.another"] });
-// `deep.store_type.another` is fully populated `{ name: string }`
+withIcon.icon;
 
+withIcon.products.forEach(product => {
+  product.name;
+})
+
+// 3) populate a nested metaobject_reference
+const deep = await repo.findById("123", { populate: ["genericObj", "genericObj"] });
+// `deep.store_type.another` is fully populated `{ name: string }`
+deep.genericObj.genericObj;
 // 4) mix-and-match
 const mix = await repo.findById("123", {
-  populate: ["icon", "store_type", "store_type.another", "products" ],
+  populate: [],
 });
 
 mix.products.forEach((product) => {
@@ -29,7 +35,7 @@ mix.products.forEach((product) => {
 
 let { pageInfo, items } = await repo.find({ first: 10, sortKey: 'display_name', populate: ['icon'], query: 'test' });
 
-let u = await repo.create({ handle: '123', capabilities: { publishable: { enabled: true } }, fields: { name: 'fff', icon: '123' } }, { populate: ['icon'] });
+let u = await repo.create({ handle: '123', capabilities: { translatable: { enabled: true } }, fields: { name: 'fff', icon: '123' } }, { populate: ['icon'] });
 
 let arrays = await repo.createMany(
   [
@@ -38,9 +44,3 @@ let arrays = await repo.createMany(
   ],
   { populate: ['icon'] }
 );
-
-deep.store_type.another.name;
-
-if (mix.icon.__typename === 'Image') {
- 
-}

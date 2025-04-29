@@ -3,7 +3,7 @@
 
 ## What is Metaobject-ORM?
 
-**Metaobject-ORM** is a simple decorator-based ORM for managing Shopify metaobjects.
+**Metaobject-ORM** is a library to interact more easily with Shopify metaobjects, with a fully typed approach.
 
 ## Why Use Metaobject-ORM?
 
@@ -17,637 +17,545 @@ To install the library, use npm:
 npm i metaobject-orm
 ```
 
-## Requirements
+## Schema
 
-Before using this library, some changes must be done to your Vite config and `tsconfig.json`. **Failing to do those changes will prevent the library to work.**
+### Defining a schema
 
-### tsconfig.json
+To start with, define a schema for your metaobjects. The schema must satisfies with the `DefinitionSchema` type:
 
-Make sure the compiler options target is set to ES2022, ES2024 or ESNext:
+```ts
+// ────────────────────────────────────────────────────────────────────────
+// File: definitions.ts
+// ────────────────────────────────────────────────────────────────────────
 
-```json
-{
-  "compilerOptions": {
-    "target": "ESNext"
+import { DefinitionSchema } from "metaobject-orm";
+
+export const definitions = [
+  {
+    type: "$app:event",
+    name: "Event",
+    displayNameKey: "label",
+    access: { 
+      storefront: "NONE"
+    },
+    capabilities: {
+      translatable: { enabled: true },
+      publishable: { enabled: true }
+    },
+    fields: [
+      { name: "Label", key: "label", type: "single_line_text_field", validations: { max: 255 } },
+      { name: "Tags", key: "tags", type: "list.single_line_text_field", validations: { listMax: 2, choices: ["Food", "Social", "Ecology"] } },
+      { name: "Product", key: "product", type: "product_reference" },
+      { name: "Banner", key: "banner", type: "file_reference", validations: { fileTypeOptions: ["Image" ] }},
+      { name: "host", key: "host", type: "metaobject_reference", metaobjectType: "$app:host" }
+    ],
+  },
+
+  {
+    type: "$app:host",
+    name: "Host",
+    displayNameKey: "first_name",
+    access: { 
+      storefront: "NONE"
+    },
+    capabilities: {
+      translatable: { enabled: true },
+      publishable: { enabled: true }
+    },
+    fields: [
+      { name: "First name", key: "first_name", type: "single_line_text_field", validations: { max: 255 } },
+      { name: "Last name", key: "last_name", type: "single_line_text_field", validations: { max: 255 } }
+    ],
   }
-}
+] as const satisfies DefinitionSchema;
+
+/** Handy alias for your definitions type. */
+export const eventRepository = new ObjectRepository(definitions, "$app:event");
+export const hostRepository = new ObjectRepository(definitions, "$app:host");
 ```
 
-### package.json
+> Don't forget the `as const satisfies DefinitionSchema`, this is essential for enabling full-typing support.
 
-By default, Vite uses an older version of ESBuild which does not support native decorators. To enable support for decorators, add the following to the `package.json`:
+The schema is pretty close to the default structure of Shopify, with a few exceptions to make it easier to use. It is also
+fully typed, meaning that you will get validation auto-completion based on the selected type.
 
-```json
-"overrides": {
-  "esbuild": "^0.25.1"
-}
+* Validations does not need to be converted to a string. You can use simple arrays.
+* When working with metaobject references (or mixed references), you can specify a type instead of an ID. This makes it
+easier to consume, and the library will take care of the dependencies when creating the schema.
+* You can create references to other metaobjects that you own, but you can also 
+
+After defining your schema, we recommend that you export one object repository for each metaobject that you need to interact
+with. Make sure to pass the type to have all the magic happen:
+
+```ts
+export const eventRepository = new ObjectRepository(definitions, "$app:event");
 ```
 
-### vite.config.ts
+### Creating the schema
 
-In the `defineConfig`, add the following code:
+When your app is installed, it is needed to create the definitions for all metaobjects. To do that, import the `definitionManager`
+and use the `createFromSchema` method (your definition schema must be exported):
 
-```js
-export default defineConfig({
-  // ... the existing config
-  esbuild: {
-    target: "es2024"
+```ts
+import { definitionManager } from "metaobject-orm";
+import { definitions } from "your-definitions";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+
+  definitionManager.withClient(admin.graphql); // <== Don't forget
+
+  await definitionManager.createFromSchema(definitions);
+
+  return null;
+};
+```
+
+> Before calling any methods from the `definitionManager`, don't forget to call the `withClient` method and passing the authentified
+GraphQL client.
+
+The `createFromSchema` will automatically:
+
+* Check if a metaobject definition depends on another definition (recursively) and create them in order.
+* Resolve the types with the created ID.
+* Ensure that definitions are not created twice, making it idempotent.
+
+> If you have a lot of definitions with complex dependencies, this method can take time. It is recommended that you save somewhere in your
+app when you have fully initialized the definitions, to skip the process.
+
+### Updating a schema
+
+It might be needed to alter a definition beyond the fixed schema. To do that, the `definitionManager` has a nice `updateDefinition`, which
+accepts a type (so you don't have to get the ID yourself) and a compliant [`MetaobjectDefinitionUpdateInput`](https://shopify.dev/docs/api/admin-graphql/unstable/input-objects/MetaobjectDefinitionUpdateInput) payload:
+
+```ts
+import { definitionManager } from "metaobject-orm";
+import { definitions } from "your-definitions";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+
+  definitionManager.withClient(admin.graphql); // <== Don't forget
+
+  await definitionManager.updateDefinition({
+    type: '$app:event',
+    definition: {
+      name: 'Big events',
+      fieldDefinitions: [
+        {
+          create: {
+            key: 'country',
+            type: 'single_line_text_field'
+          }
+        }
+      ]
+    }
+  })
+
+  return null;
+};
+```
+
+## Interacting with the object manager
+
+To interact with metaobjects, you must create an object manager for a given type. We recommend to export it along your definitions so that
+it can be accessed globally:
+
+definition.ts:
+
+```ts
+export const eventRepository = new ObjectRepository(definitions, "$app:event");
+```
+
+app.ts:
+```ts
+import { eventRepository } from "your-definitions";
+import { definitions } from "your-definitions";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+
+  eventRepository.withClient(admin.graphql); // <== Don't forget
+
+  // Do something with the repository
+
+  return null;
+};
+```
+
+> As for the `definitionManager`, don't forget to call the `withClient` method before interacting with a repository. If you have multiple
+repositories, you must call this for all your repositories.
+
+### Understanding the typing system
+
+The whole purpose of this library is to automatically infer types from the schema. To make it easier to work with, this library makes a
+few assumptions:
+
+* All metaobject fields are saved using `snake_case` conventions (to make it consistent with Liquid conventions).
+* All metaobject fields are converted back to `camelCase` to make it consistent with JavaScript convention.
+
+When working with this library, you must make sure that your schema is using snake_case keys. However, all the types are automatically converted
+to `camelCase`, and you don't have to convert back to snake_case yourself when saving data: everything is done for you.
+
+### Finding by handle
+
+To get a metaobject by handle, use the `findByHandle`:
+
+```ts
+const event = await eventRepository.findByHandle('my-handle', opts);
+```
+
+Supported options:
+
+* `populate`
+* `onPopulate`
+
+### Finding by ID
+
+To get a metaobject by handle, use the `findById`:
+
+```ts
+const event = await eventRepository.findById('1234', opts);
+```
+
+Supported options:
+
+* `populate`
+* `onPopulate`
+
+> You can either pass a legacy ID or a GID. The library will automatically make the conversion.
+
+### Find all
+
+To get all metaobjects of a given type, use the `findAll`:
+
+```ts
+const event = await eventRepository.findAll('1234', opts);
+```
+
+Supported options:
+
+* `populate`
+* `onPopulate`
+* `sortKey`
+* `limit`: change the default 250 limit to something smaller (useful for reducing query cost)
+
+> Only up to 250 metaobjects can be retrieved at a time. This method is handy when you don't need validations, but if your
+definitions can have more than 250 objects, use the `find` method instead for more control.
+
+### Find
+
+To get metaobjects of a given type, use the `find`:
+
+```ts
+const event = await eventRepository.find(opts);
+```
+
+Supported options:
+
+* `populate`
+* `onPopulate`
+* `sortKey`
+* `first`
+* `after`
+* `last`
+* `before`
+* `query`
+* `reverse`
+
+### Deleting by ID
+
+To get a metaobject by handle, use the `delete`:
+
+```ts
+const event = await eventRepository.delete('1234');
+```
+
+> You can either pass a legacy ID or a GID. The library will automatically make the conversion.
+
+### Bulk delete
+
+To get a metaobject by handle, use the `bulkDelete`:
+
+```ts
+const job = await eventRepository.bulkDelete(['1234', '4567']);
+```
+
+The `bulkDelete` being a asynchronous operation, it returns a `Job` instance, that you can inspect to get details.
+
+> You can either pass a legacy ID or a GID. The library will automatically make the conversion.
+
+### Creating an object
+
+To create a metaobject, use the `create` method:
+
+```ts
+const event = await eventRepository.create({
+  handle: 'your-handle', // <== Optional
+  capabilities: { publishable: { status: 'ACTIVE' } },
+  fields: {
+    name: 'Event',
+    tags: ['Food']
   }
-});
+}, { opts });
 ```
 
-## Defining Mappings
+Supported options:
 
-First, define mappings for your metaobjects, including fields, embedded structures, and relationships.
+* `populate`
+* `onPopulate`
 
-### Embeddable object
+Here as well, everything is fully-typed, so only the capabilities specified in your schema can be setup, and all the fields are
+also auto-completed. Fields that are marked with a `required: true` in your schema are required when using the `create` method.
 
-Embedded objects are objects defined in your code, but that do not map to a metaobject definition on Shopify. Instead, they are meant to be embedded as a JSON field of a parent metaobject, while still giving you a clean object-oriented architecture:
+> To make it easier to work with JavaScript conventions, all fields must be set using `camelCase`. The library automatically converts
+them to `snake_case` and convert them to the required Shopify structure.
 
-**Address.ts**:
+### Creating multiple objects
 
-```typescript
-@Embeddable({
-  schema: {} // Optional JSON schema validation
-})
-class Address {
-  country: string;
-  city: string;
-  zipCode: string;
-  street: string;
-}
-```
-
-### Metaobjects
-
-**Instructor.ts**:
-
-```typescript
-import { Metaobject, Field } from 'metaobject-orm/decorators';
-
-@Metaobject({
-  type: '$app:instructor',
-  name: 'Instructor',
-  access: { admin: 'MERCHANT_READ', storefront: 'PUBLIC_READ' }
-})
-class Instructor {
-  @Handle()
-  handle: string;
-  
-  @Field({ type: 'single_line_text_field' })
-  firstName: string;
-
-  @Field({ type: 'single_line_text_field' })
-  lastName: string;
-}
-```
-
-**Workshop.ts**:
-
-```typescript
-import { Metaobject, Field } from 'metaobject-orm/decorators';
-import { Money } from 'metaobject-orm/types';
-
-@Metaobject({
-  type: '$app:workshop',
-  name: 'Workshop',
-  access: { admin: 'MERCHANT_READ', storefront: 'PUBLIC_READ' }
-})
-class Workshop {
-  @Field({ type: 'single_line_text_field', validations: { minLength: 3 } })
-  title: string;
-
-  @Field({ type: 'multi_line_text_field' })
-  description: string;
-
-  @Field({ type: 'money' })
-  participationPrice: Money;
-
-  @Field({ type: 'single_line_text_field', list: true, description: 'Internal use tags' })
-  tags: string[];
-
-  @Field({ embedded: Address })
-  address: Address;
-
-  @Field({ metaobject: Instructor, list: true })
-  instructors: Reference<Instructor>[];
-
-  @Field({ type: 'product_reference' })
-  product: Reference<object>;
-}
-```
-
-**Important notes:**  
-- Embeddables don't support `@Field` decorators, as the whole content is serialized to JSON. If you wish to configure which
-fields are set, you can override the `toJSON` method inside the embeddable.
-- Keys and field names are automatically inferred (pascal-case names, underscore-separated keys) to match Liquid conventions.
-
-## Decorators reference
-
-### @Metaobject
-
-| Parameter         | Type                      | Required | Description                                                  |
-|------------------ |---------------------------|:--------:|--------------------------------------------------------------|
-| `type`            | `string`                  | ✅ Yes    | Metaobject definition type                                   |
-| `name`            | `string`                  | ✅ Yes    | Display name for the metaobject                              |
-| `description`     | `string`                  | ❌ No     | Optional description                                        |
-| `access`          | `MetaobjectAccess`        | ❌ No     | Admin/storefront permissions                                 |
-| `capabilities`    | `MetaobjectCapabilities`  | ❌ No     | Default capabilities                                        |
-| `repositoryClass` | `class`                   | ❌ No     | Custom repository class                                     |
-
-### @Embeddable
-
-| Parameter | Type     | Required | Description                                                                 |
-|-----------|----------|:--------:|-----------------------------------------------------------------------------|
-| `schema`  | `object` |   ❌ No   | A valid [JSON Schema](https://json-schema.org/learn/miscellaneous-examples) object. |
-| `strict`  | `boolean` |   ❌ No  | If set to false, properties that exist on Shopify but not in your object will be preserved. |
-
-### @Field
-
-| Parameter    | Type      | Required | Description                                                                                                                                                                                                 |
-|--------------|-----------|:--------:|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `type`       | `string`  | ✅ Yes   | One of the supported [metafield type](https://shopify.dev/docs/apps/build/custom-data/metafields/list-of-data-types#supported-types). When using a list, do **not** prepend `"list."`; use the `list` flag instead. |
-| `name`       | `string`  | ❌ No    | Optional display name for the field in the definition. If omitted, the property name is wordified (e.g., `"participationPrice"` becomes `"Participation price"`).                                          |
-| `key`        | `string`  | ❌ No    | The field key in the metaobject. If omitted, the property name is converted to snake_case (e.g., `"participationPrice"` becomes `"participation_price"`).                                                 |
-| `description`| `string`  | ❌ No    | Optional description that appears in the metaobject structure.                                                                                                                                              |
-| `required`   | `boolean` | ❌ No    | If `true`, an object must have a value for this field to be saved.                                                                                                                                          |
-| `list`       | `boolean` | ❌ No    | Set to `true` to allow a list of values. **Note:** not supported for the `rich_text_field` metafield type.                                                                                                 |
-
-In addition to those global elements, some fields have extra parameters.
-
-#### Embedded fields
-
-When embedding an other object, you must pass the `embedded` attribute to the embeddable object. Note that the type will be forced to `json`, so you don't
-have to specify the type explicitly:
-
-| Parameter | Type     | Required | Description                                                                 |
-|-----------|----------|:--------:|-----------------------------------------------------------------------------|
-| `embedded`  | Object |   ✅ Yes    | The constructor name |
-
-Example:
+To create multiple metaobjects, use the `createMany` method:
 
 ```ts
-@Field({ embedded: Address })
-address?: Address;
+const events = await eventRepository.createMany(
+  [
+    {
+    handle: 'your-handle', // <== Optional
+    capabilities: { publishable: { status: 'ACTIVE' } },
+    fields: {
+      name: 'Event',
+      tags: ['Food']
+    },
+    {
+    handle: 'your-handle-2', // <== Optional
+    capabilities: { publishable: { status: 'ACTIVE' } },
+    fields: {
+      name: 'Another event',
+      tags: ['Food']
+    }
+  ], 
+  { opts });
 ```
 
-#### Metaobjects
+Supported options:
 
-When creating a relation to metaobjects, you have two options:
+* `populate`
+* `onPopulate`
 
-* For metaobjects that you own (objects that you also manage using the library), you must pass the `metaobject` parameter. The `type` is automatically set to `metaobject_reference` so you don't have to set it explicitly.
+> `createMany` is only available on the `unstable` API.
 
-| Parameter    | Type   | Required | Description                         |
-|--------------|--------|:--------:|-------------------------------------|
-| `metaobject` | Object | ✅ Yes   | The constructor of the metaobject.  |
+### Update an object
 
-Example:
+To update an existing metaobject, use the `update` method:
 
 ```ts
-@Field({ metaobject: Instructor })
-instructor?: Instructor;
+const event = await eventRepository.update({
+  id: 'gid://shopify/Metaobject/123', // <== Required
+  handle: 'your-handle', // <== Optional
+  redirectNewHandle: false, // <== Optional
+  capabilities: { publishable: { status: 'ACTIVE' } },
+  fields: {
+    name: 'Event',
+    tags: ['Food']
+  }
+}, { opts });
 ```
 
-* For metaobjects that you don't own (for instance to create a reference to a metaobject own by Shopify), you must explicitly pass the `type` to `metaobject_reference`, and the `metaobjectType` to the actual type:
+Supported options:
 
-| Parameter        | Type     | Required | Description             |
-|------------------|----------|:--------:|-------------------------|
-| `metaobjectType` | `string` | ✅ Yes   | The metaobject type.    |
+* `populate`
+* `onPopulate`
 
-Example:
+As for the `create` method, everything is fully typed. However, contrary to the `create` method, even if fields are marked as `required: true`
+in the schema, everything will be optional in the update method.
+
+### Upsert an object
+
+To upsert an existing metaobject, use the `upsert` method:
 
 ```ts
-@Field({ type: 'metaobject_reference', metaobjectType: 'shopify--123--something' })
-something?: object;
+const event = await eventRepository.upsert({
+  handle: 'your-handle', // <== Required in upsert
+  capabilities: { publishable: { status: 'ACTIVE' } },
+  fields: {
+    name: 'Event',
+    tags: ['Food']
+  }
+}, { opts });
 ```
 
-### @DynamicFields
+Supported options:
 
-| Parameter | Type     | Required | Description                                                                 |
-|-----------|----------|:--------:|-----------------------------------------------------------------------------|
-| `keyPrefix`  | `string` |  ✅ Yes  | A key prefix for all the dynamic fields. |
+* `populate`
+* `onPopulate`
 
-## Working with the Object Manager
+As for the `create` method, everything is fully typed. However, contrary to the `create` method, even if fields are marked as `required: true`
+in the schema, everything will be optional in the upsert method.
 
-> As of today, Remix (most Shopify apps are created with it) does not have middleware concept. As a consequence, the object manager must be initialized on each loader with the GraphQL client. In the future, when Remix will support middlewares, it will be possible to initialize it once, so that you don't have to do it on nested loaders. To ease this future migration, passing the client is done with a separated `withClient` method.
+### Populating
 
-### Managed Objects
+All methods (except `delete` and `bulkDelete`) support an optional `populate` array. This array, which is auto-completed based on your schema,
+allows to generate optimized queries that automatically fetch references (eventually recursively).
 
-Managed objects provide both your data and Shopify metadata (supported metadata are documented in the example). An object is managed when you retrieve it from a `find*` method.
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, { id: 'gid://shopify/Metaobject/123' });
-
-console.log(workshop.title);
-console.log(workshop.system.id);
-console.log(workshop.system.handle);
-console.log(workshop.system.createdAt);
-console.log(workshop.system.updatedAt);
-console.log(workshop.system.displayName);
-console.log(workshop.system.thumbnail);
-```
-
-### CRUD Operations
-
-#### Find One
-
-Find by ID or handle:
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-// By ID
-const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, 'gid://shopify/Metaobject/123');
-
-// By handle
-const workshopByHandle = await objectManager.withClient(admin.graphql).findOne(Workshop, 'foo');
-```
-
-The `findOne` method might returns null if the object is not found. You can also throw an exception instead by using the `findOneOrFail` method:
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-try {
-  const workshop = await objectManager.withClient(admin.graphql).findOneOrFail(Workshop, 'foo');
-} catch (e) {
-  // Handle error
-}
-```
-
-#### Find Many
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-const workshops = await objectManager.withClient(admin.graphql).find(Workshop, {
-  query: 'display_name: f',
-  sortBy: 'display_name',
-  reverse: false,
-  first: 10, // or last for backward pagination
-  after: '' // or before for backward pagination
-});
-```
-
-#### Delete
-
-Single delete:
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-// By ID
-await objectManager.withClient(admin.graphql).delete(Workshop, 'gid://shopify/Metaobject/123');
-
-// Managed object
-const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, 'foo');
-await objectManager.withClient(admin.graphql).delete(Workshop, workshop);
-```
-
-Bulk delete (async):
-
-> Internally, Shopify implements bulk delete using a bulk mutation. This method therefore returns a `Job`
-object that you can track for completion.
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-// By IDs
-await objectManager.withClient(admin.graphql).deleteBulk(Workshop, ['gid://shopify/Metaobject/123']);
-```
-
-#### Create
-
-Single create (by default, Shopify will auto-generate an handle):
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-const workshop = new Workshop();
-workshop.title = 'Foo';
-
-await objectManager.withClient(admin.graphql).create(Workshop, workshop);
-```
-
-Create with handle:
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-await objectManager.withClient(admin.graphql).create(Workshop, { object: workshop, handle: 'foo' });
-```
-
-Create many (limited to 25):
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-await objectManager.withClient(admin.graphql).createMany(Workshop, [workshop1, workshop2]);
-```
-
-Or create many with handles:
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-await objectManager.withClient(admin.graphql).createMany(Workshop, [{ object: workshop1, handle: 'foo' }, { object: workshop2, handle: 'bar' }]);
-```
-
-#### Upsert
-
-Upsert one object that is already managed (effectively doing an update):
-
-> This will throw an error if the object is not managed, and that no handle is given explicitly:
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-await objectManager.withClient(admin.graphql).upsert(Workshop, workshop);
-```
-
-Upsert one object with an explicit handle:
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-await objectManager.withClient(admin.graphql).upsert(Workshop, { object: workshop, handle: 'foo' });
-```
-
-Bulk upsert (async):
-
-> Internally, this uses a bulk mutation. This method therefore returns a `Job` object that you can track for completion.
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-await objectManager.withClient(admin.graphql).upsertBulk(Workshop, [{ object: workshop, handle: 'foo' }]);
-```
-
-#### Update
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, 'foo');
-workshop.title = 'New title';
-
-await objectManager.withClient(admin.graphql).update(Workshop, workshop);
-```
-
-### Working with References
-
-By default, only the ID from references is retrieved. You can ask the ORM to include one or mutliple references:
-
-> Requesting too many references might hit the rate limits faster. Make sure to monitor your API calls and ensure that you
-ask only what is needed.
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-const workshop = await objectManager.withClient(admin.graphql).findOne(Workshop, 'foo', { include: ['instructors'] });
-console.log(workshop.instructors);
-```
-
-This can work recursively by using the dot notation (eg.: `instructors.profilePicture`).
-
-### Using repositories
-
-When using the object manager, you must pass the object type in each call. You can also get a repository, so that you don't
-have to manually pass the object type.
-
-```typescript
-import { objectManager } from 'metaobject-orm/persistence';
-
-const workshopRepository = objectManager.getRepository(Workshop);
-await workshopRepository.withClient(admin.graphql).findOne('foo');
-```
-
-#### Custom repositories
-
-You can create a custom repository to encapsulate common or specialized queries. This helps maintain clean and reusable code.
-
-Step 1: Define your custom repository
-
-workshop-repository.ts:
+For instance, assuming our example schema:
 
 ```ts
-import { ObjectRepository } from 'metaobject-orm/persistence';
-import { Workshop } from './Workshop';
+const event = await eventRepository.findByHandle('my-handle');
+event.label; // <== typed as string (as it is a string)
+event.host; // <== typed as string (it is the ID to the reference), but has not been populated
 
-export class WorkshopRepository extends ObjectRepository<Workshop> {
-  async findOldest(): Promise<Workshop[]> {
-    return this.find({
-      sortBy: 'created_at'
+const populatedEvent = await eventRepository.findByHandle('my-handle', { populate: ["host"] });
+event.label; // <== typed as string (as it is a string)
+event.host; // <== typed as { firstName: string, lastName: string }
+```
+
+This also works recursively by using the dot notation:
+
+```ts
+const populatedEvent = await eventRepository.findByHandle('my-handle', { populate: ["host"] });
+event.label; // <== typed as string (as it is a string)
+event.host; // <== typed as { firstName: string, lastName: string, anotherReference: string }
+
+const populatedEvent = await eventRepository.findByHandle('my-handle', { populate: ["host.anotherReference"] });
+event.label; // <== typed as string (as it is a string)
+event.host; // <== typed as { firstName: string, lastName: string, anotherReference: { ANOTHER TYPE } }
+```
+
+This work for queries, but also for mutations, which means that you can do an optimized query that create an option AND
+get the fully populated object:
+
+```ts
+const event = await eventRepository.create({
+  fields: {
+    name: 'Event',
+    tags: ['Food'],
+    host: 'gid://shopify/Metaobject/123'
+  }
+}, { populate: ['host'] });
+
+event.host; // <== thanks to the populate option, the host is of type { firstName: string, lastName: string }
+```
+
+### Accessing system data
+
+Whenever you interact with a repository method, it returns a fully created object. In addition to all the fields, the
+library also transparently fetch metaobject data and store them inside a `system` key:
+
+```ts
+const event = await eventRepository.findById('1234', opts);
+
+event.system.id; // Get the ID of the metaobject
+event.system.handle; // Get the handle of the metaobject
+event.system.displayName; // Get the display name
+event.system.createdAt; // Get the creation date
+event.system.updatedAt; // Get the updated date
+event.system.capabilities; // Get the capabilities
+event.system.thumbnail; // Get the thumbnail object
+```
+
+To reduce query cost, the library fetches some information conditionally. For instance, `capabilities` are only retrieved
+when the definition specifies one or more capabilities, while the `thumbnail` is only retrieved if the definition has at least
+one `color` or one `file_reference` field in its schema.
+
+### Customizing references
+
+When working with metaobjects that you own, you don't have anything special to do. However, it becomes a bit more complicatd
+when interacting with references to other resources, such as products or collections.
+
+Let's say that you have a schema like this:
+
+```ts
+export const definitions = [
+  {
+    type: "$app:event",
+    name: "Event",
+    displayNameKey: "label",
+    access: { 
+      storefront: "NONE"
+    },
+    capabilities: {
+      translatable: { enabled: true },
+      publishable: { enabled: true }
+    },
+    fields: [
+      { name: "Label", key: "label", type: "single_line_text_field", validations: { max: 255 } },
+      { name: "Product", key: "featured_product", type: "product_reference" }
+    ],
+  },
+] as const satisfies DefinitionSchema;
+```
+
+Here, our definition contains a reference to a built-in resource, a product.
+
+When retrieving it, by default the ID will be returned:
+
+```ts
+const event = await eventRepository.findByHandle('my-handle');
+event.featuredProduct: // Type as string
+```
+
+If we populate, however, the library will do an optimized query to get the product reference:
+
+```ts
+const event = await eventRepository.findByHandle('my-handle', { populate: ["productReference" ]});
+event.featuredProduct: // Type as Product
+```
+
+To avoid performance problems, when creating a reference to a built-in type, the library will limit the
+fields it gets. Here is the list of default fields being available when populating a reference:
+
+* Product reference: 'id', 'handle', 'title', 'vendor', 'updatedAt'
+* Collection reference: 'id', 'handle', 'title', 'updatedAt'
+* Customer reference: 'id', 'displayName', 'email', 'phone', 'updatedAt'
+* Metaobject reference / mixed reference (that are not owned by your app): 'id', 'handle', 'displayName', 'updatedAt'
+* Page reference: 'id', 'handle', 'title', 'updatedAt'
+* Product taxonomy value: 'id', 'name'
+* Variant reference: 'id', 'title', 'sku', 'price', 'inventoryQuantity', 'barcode'
+* File reference:
+  * If "Image": 'id', 'image.id', 'image.altText', 'image.height', 'image.width', 'image.url'
+  * If "Video": 'id', 'duration', 'sources.format', 'sources.fileSize', 'sources.height', 'sources.width', 'sources.mimeType', 'sources.url',
+    'preview.image.id', 'preview.image.altText', 'preview.image.height', 'preview.image.width', 'preview.image.url'
+  * If "Generic": 'id', 'alt', 'url', 'preview.image.id', 'preview.image.altText', 'preview.image.height', 'preview.image.width', 'preview.image.url'
+
+> We reserve the right to add more fields if they do not impact performance negatively.
+
+Sometimes, it might be useful to get more information. To do that, the library let you define an optional `onPopulate` method. This gives
+you access to the underlying builder:
+
+```ts
+import { FieldBuilder } from "raku-ql";
+import { OnPopulateFunc, FieldDefinition } from "metaobject-orm":
+
+const onPopulate: OnPopulateFunc = (fieldDefinition: FieldDefinition, fieldBuilder: FieldBuilder) => {
+  // FieldDefinition: { name: string, type: string, key: string, required: boolean, description: string, validations: [] }
+
+  if (fieldDefinition.key === 'product') {
+    return fieldBuilder.inlineFragment<Product>('Product', (fragment) => {
+      fragment
+        .fields('id', 'handle', 'title', 'vendor', 'updatedAt')
+        .object('category', (category) => {
+          category.fields('id', 'fullName', 'isArchived')
+        })
     });
   }
 }
-```
 
-Step 2: Link the repository to your metaobject definition
-
-```ts
-import { Metaobject } from 'metaobject-orm/decorators';
-import { WorkshopRepository } from './workshop-repository';
-
-@Metaobject({
-  type: '$app:workshop',
-  repository: WorkshopRepository
-})
-class Workshop {
-  // ... your fields
-}
-```
-
-Step 3: Using your custom repository
-
-```ts
-import { objectManager } from 'metaobject-orm/persistence';
-
-const workshopRepository = objectManager.getRepository(Workshop); // Returns your custom repository
-const oldestWorkshops = await workshopRepository.withClient(admin.graphql).findOldest();
-```
-
-## Managing definitions
-
-`Metaobject-ORM` provides a convenient API for managing metaobject definitions in your Shopify store, including verifying, creating, deleting, synchronizing, and customizing definitions.
-
-### Checking if a definition exists
-
-You can verify if a metaobject definition exists:
-
-```typescript
-import { definitionManager } from 'metaobject-orm/definition';
-
-const exists = await definitionManager
-  .withClient(admin.graphql)
-  .exists(Workshop);
-```
-
-### Creating a definition
-
-To create a new definition (throws an error if the definition already exists):
-
-```typescript
-import { definitionManager } from 'metaobject-orm/definition';
-
-const createdDefinitionId = await definitionManager
-  .withClient(admin.graphql)
-  .create(Workshop);
-```
-
-### Deleting a definition
-
-To delete an existing definition:
-
-```typescript
-import { definitionManager } from 'metaobject-orm/definition';
-
-const deletedDefinitionId = await definitionManager
-  .withClient(admin.graphql)
-  .delete(Workshop);
-```
-
-### Synchronizing definitions
-
-The `sync` method automatically manages multiple definitions by:
-
-- Creating missing definitions.
-- Updating existing definitions with new or modified fields.
-- Optionally deleting definitions or fields no longer present in your project.
-
-**Example:**
-
-```typescript
-import { definitionManager } from 'metaobject-orm/definition';
-
-await definitionManager.withClient(admin.graphql).sync({
-  deleteDanglingDefinitions: true, // deletes definitions no longer defined in your code
-  deleteDanglingFields: true       // deletes fields no longer defined in your code
+const event = await eventRepository.findByHandle('my-handle', { 
+  populate: ['product'],
+  onPopulate
 });
+
+event.featuredProduct.category.fullName; // This can be accessed
 ```
 
-> By default, both `deleteDanglingDefinitions` and `deleteDanglingFields` are set to false, to avoid unwanted removal.
+The `onPopulate` function gives you two argument:
 
-Usually, the `sync` method is called during the initial app installation to set up all required definitions.
+* The `fieldDefinition` gives you full details from the schema about this field, allowing you to controlling on a per-field
+basis which info to retrieve. Please note that here, the `key` is the key from the schema, so it is `snake_case`.
+* The `fieldBuilder` is a FieldBuilder instance from the library `raku-ql` that we have created to use for this library. You
+can learn more about this library [here](https://github.com/maestrooo/raku-ql).
 
-> **Note:** The library automatically manages definition creation order based on object relationships (e.g., it ensures `Instructor` is defined before `Workshop` if needed).
+The `Product` passed in the example is coming from the Shopify auto-generated types, and allows you to get full auto-completion
+for the fields.
 
-### Customizing definitions
-
-You can add, update, or remove fields dynamically from existing definitions. To use this feature, your metaobject must include the `@DynamicFields` decorator. Each customized field uses a prefix to avoid conflicts.
-
-**Example:**
-
-```typescript
-import { definitionManager } from 'metaobject-orm/definition';
-
-await definitionManager.withClient(admin.graphql).customize(Workshop, {
-  create: {
-    key: 'bar',
-    name: 'Bar',
-    required: false
-  },
-  update: {
-    key: 'foo',
-    name: 'New foo'
-  },
-  delete: {
-    key: 'baz'
-  }
-});
-```
-
-**Important:**  
-- Only one field per operation (`create`, `update`, `delete`) is allowed per call.
-- The field keys will automatically include the prefix defined in `@DynamicFields`. For example, if your prefix is `custom`, the keys become `custom_bar`, `custom_foo`, and `custom_baz`.
-- Keys won't be automatically converted to underscore_separated. You must do it yourself. However, when hydrated to your object, they will be converted to
-camelCase. So the key `durability_rating` will be accessible using `myObject.dynamicFields.durabilityRating`.
-- Name are not inferred here, so you must explicitly pass them.
-
-## Advanced use: Dynamic fields
-
-Sometimes, it's useful to combine a set of structured fields (common to all merchants) with additional custom fields unique to each merchant. For example, you might have a "Review" metaobject that includes a fixed set of standard fields required by all merchants, but you also want to allow each merchant the flexibility to define their own custom fields.
-
-There are two primary ways to accomplish this:
-
-- **Use a JSON field:** This method allows you to store extra, unstructured information within a single JSON field.
-- **Use the `DynamicFields` decorator:** This approach allows structured access to custom fields by prefixing the field keys, saving each custom field into a dedicated field.
-
-Here's how you can implement the `DynamicFields` decorator:
-
-**Review.ts:**
-
-```ts
-import { Metaobject } from 'metaobject-orm/decorators';
-
-@Metaobject({ type: '$app:review' })
-class Review {
-  @Field({ type: 'rating' })
-  rating: object;
-
-  @DynamicFields({ keyPrefix: 'custom' })
-  dynamicFields: DynamicFields;
-}
-```
-
-For instance, suppose you've defined the fields `custom_durability_rating` and `custom_quality_rating`. Here's how you can retrieve them:
-
-```ts
-const review = objectRepository.withClient(admin.graphql).find({ handle: 'foo' });
-
-review.rating; // Accesses the rating from the common definition
-review.dynamicFields.durabilityRating; // Retrieves the durability rating value
-
-// You can also use these additional utility methods:
-
-if (review.dynamicFields.has('durabilityRating')) {
-  // Check if the field exists
-}
-
-review.dynamicFields.get('durabilityRating'); // Same as accessing the field directly
-review.dynamicFields.getSchema('durabilityRating'); // Retrieves the schema of the custom field (useful to show them in the app admin)
-
-review.dynamicFields.forEach(([key, value]) => {
-  console.log(key); // Outputs: "durabilityRating"
-  console.log(value); // Outputs the value of the durability rating field
-});
-```
-
-## Limitations
-
-- No diff-checking (all fields updated).
-- No mixed references.
-- No cascading creation (nested object creation).
-
-Example (manual cascading creation):
-
-```typescript
-const instructor = new Instructor();
-instructor.firstName = 'John';
-await objectManager.withClient(admin.graphql).create(Instructor, { object: instructor });
-
-const workshop = new Workshop();
-workshop.instructor = instructor;
-await objectManager.withClient(admin.graphql).create(Workshop, { object: workshop });
-```
-
-## TODO
-
-* Add a `wrap` utility (like Mikro ORM does) to create the proxy.
-* Add a `objectManager.newObject(Workshop, { values })`.
-
-
-
-```typescript
-export const definitions = [
-  {
-    type: "$app:test",
-    fields: [
-      { name: "Name", displayName: true },
-      { name: "Icon", type: "file_reference" }
-    ]
-  }
-]
-```
+> As of today, references to built-in types are not fully typed, so if you dynamically change the fields that you retrieve,
+this won't be reflected in the type.

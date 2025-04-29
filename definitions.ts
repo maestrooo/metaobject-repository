@@ -2,7 +2,7 @@
 // File: definitions.ts
 // ────────────────────────────────────────────────────────────────────────
 
-import { DefinitionsSchema } from "./src-experimental/types/definitions";
+import { DefinitionSchema } from "./src/types/definitions";
 import { MetaobjectStorefrontAccess } from "./src/types/admin.types";
 
 /**
@@ -11,9 +11,10 @@ import { MetaobjectStorefrontAccess } from "./src/types/admin.types";
  *  - `validations.fileTypes` for file_reference
  *  - `metaobjectType` pointing at another definition key
  */
-export const definitions = {
-  Another: {
+export const definitions = [
+  {
     type: "$app:bar",
+    name: "Test",
     access: { 
       storefront: MetaobjectStorefrontAccess.None 
     },
@@ -24,48 +25,55 @@ export const definitions = {
       publishable: { enabled: true }
     },
     fields: [
-      { name: "name", type: "single_line_text_field", validations: { maxLength: 34 } },
+      { name: "name", key: "name", type: "single_line_text_field", validations: { max: 34 } },
     ],
   },
-  StoreType: {
+  {
     type: "$app:baz",
+    name: "Store type",
     fields: [
-      { name: "name",        type: "single_line_text_field", required: true },
+      { name: "name", key: "name",        type: "single_line_text_field", required: true },
       {
         name:        "icon",
+        key: "icon",
         type:        "file_reference",
-        validations: { fileTypes: ["Image"] },
+        validations: { fileTypeOptions: ["Image"] },
       },
-      { name:       "generic_obj", type: "metaobject_reference" },
+      { name:       "Generic obj", key: "generic_obj", type: "metaobject_reference", metaobjectType: "$app:bar" },
       {
-        name:         "another",
+        name:         "Another",
+        key: "another",
         type:         "metaobject_reference",
         metaobjectType: "$app:bar",
       },
     ],
   },
-  Test: {
+  {
     type: "$app:test",
+    name: "Test",
     capabilities: { 
-      publishable: { enabled: true }
+      publishable: { enabled: true },
+      translatable: { enabled: true }
     },
     fields: [
-      { name:       "name",        type: "single_line_text_field", required: true },
+      { name:       "name", key: "name",        type: "single_line_text_field", required: true },
       {
         name:        "icon",
+        key: "icon",
         type:        "file_reference",
-        validations: { fileTypes: ["Image","Video"] },
+        validations: { fileTypeOptions: ["Video"] },
       },
-      { name:       "generic_obj", type: "metaobject_reference" },
-      { name:       "products", type: "list.product_reference" },
+      { name:       "generic Obj", key: "generic_obj", type: "metaobject_reference", metaobjectType: "$app:baz" },
+      { name:       "products", key: "products", type: "list.product_reference" },
       {
-        name:         "store_type",
+        name:         "Store type",
+        key:  "sto_t",
         type:         "metaobject_reference",
         metaobjectType: "$app:baz",
       },
     ],
   },
-} as const satisfies DefinitionsSchema;
+ ] as const satisfies DefinitionSchema;
 
-/** Handy alias for your definitions’ type. */
+/** Handy alias for your definitions type. */
 export type Definitions = typeof definitions;

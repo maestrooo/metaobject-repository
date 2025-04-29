@@ -1,8 +1,8 @@
 import { GraphQLClient } from "node_modules/@shopify/shopify-app-remix/dist/ts/server/clients/types";
+import { DefinitionSchema, FieldDefinition } from "./types/definitions";
 import { AdminOperations } from "@shopify/admin-api-client";
-import { MetaobjectAccessInput, MetaobjectDefinitionCreateInput, MetaobjectDefinitionUpdateInput } from "~/types/admin.types";
 import { snake } from "snake-camel";
-import { DefinitionsSchema, FieldDefinition } from "./types/definitions";
+import { MetaobjectAccessInput, MetaobjectDefinitionCreateInput, MetaobjectDefinitionUpdateInput } from "~/types/admin.types";
 
 /**
  * Manage the schema definitions
@@ -22,28 +22,29 @@ export class DefinitionManager {
   /**
    * Create a list of definitions from the schema. It automatically handles the creation of the metaobjects definitions recursively
    */
-  async createFromSchema(definitions: DefinitionsSchema): Promise<void> {
+  async createFromSchema(definitions: DefinitionSchema): Promise<void> {
     // 1) Turn our DefinitionsSchema into GraphQL inputs, one per key
     const createInputs: Record<string, MetaobjectDefinitionCreateInput> = {};
-    for (const [key, schema] of Object.entries(definitions)) {
-      createInputs[key] = {
-        type: schema.type,
-        name: schema.name,
-        description: schema.description,
-        displayNameKey: schema.displayNameKey,
-        access: schema.access as MetaobjectAccessInput,
-        capabilities: schema.capabilities,
-        fieldDefinitions: schema.fields.map((field) => ({
+
+    definitions.forEach((definition) => {
+      createInputs[definition.type] = {
+        type: definition.type,
+        name: definition.name,
+        description: definition.description,
+        displayNameKey: definition.displayNameKey,
+        access: definition.access as MetaobjectAccessInput,
+        capabilities: definition.capabilities,
+        fieldDefinitions: definition.fields.map((field) => ({
           name:        field.name,
-          key:         field.key ?? snake(field.name),
+          key:         field.key,
           type:        field.type,
           description: field.description ?? '',
           required:    field.required ?? false,
           validations: this.convertValidations(field),
         })),
       };
-    }
-
+    });
+    
     // 2) Prime existing definitions by type
     const existingIds: Record<string, string> = {};
     await Promise.all(

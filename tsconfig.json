@@ -1,5 +1,5 @@
 {
-  "include": ["types"],
+  "include": ["types", "./src/**/*.ts"],
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
@@ -10,6 +10,10 @@
     "strict": true,
     "skipLibCheck": true,
     "types": ["node"],
-    "moduleResolution": "Bundler"
+    "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./src/*"]
+    }
   }
 }

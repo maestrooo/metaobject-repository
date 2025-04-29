@@ -1,9 +1,7 @@
 import { 
   MetaobjectCapabilitiesOnlineStore, MetaobjectCapabilitiesPublishable, MetaobjectCapabilitiesRenderable, MetaobjectCapabilitiesTranslatable, 
   MetaobjectCapabilityOnlineStoreInput, MetaobjectCapabilityPublishableInput, GenericFile, Image, Metaobject, MetaobjectAccessInput, 
-  Product, Video, Collection, Customer, Page, ProductVariant, TaxonomyValue,
-  MetaobjectCapabilityData,
-  MetaobjectThumbnail
+  Product, Video, Collection, Customer, Page, ProductVariant, TaxonomyValue, MetaobjectCapabilityData, MetaobjectThumbnail
 } from "~/types/admin.types";
 
 /**
@@ -155,7 +153,7 @@ type FieldDefinitionMap = {
   [T in FieldType]: {
     name: string;
     type: T;
-    key?: string;
+    key: string;
     required?: boolean;
     description?: string;
   }
@@ -175,11 +173,11 @@ type FieldDefinitionMap = {
       ? { validations?: ValidationConfigMap[T] }
       : {})
   // only add `metaobjectType` on metaobject_reference
-  & (T extends "metaobject_reference"
+  & (T extends "metaobject_reference" | "list.metaobject_reference"
       ? { metaobjectType?: string }
       : {})
   // only add `metaobjectTypes` on mixed_reference
-  & (T extends "mixed_reference"
+  & (T extends "mixed_reference" | "list.mixed_reference"
     ? { metaobjectTypes?: string[] }
     : {});
 };
@@ -187,17 +185,19 @@ type FieldDefinitionMap = {
 /** Union of all field shapes */
 export type FieldDefinition = FieldDefinitionMap[keyof FieldDefinitionMap];
 
-export type DefinitionsSchema = {
-  [K: string]: {
-    type: string;
-    name: string;
-    description?: string;
-    displayNameKey?: string;
-    access?: MetaobjectAccessInput;
-    capabilities?: Partial<CapabilityConfigMap>;
-    fields: readonly FieldDefinition[];
-  };
+export type DefinitionSchemaEntry = {
+  type: string;
+  name: string;
+  description?: string;
+  displayNameKey?: string;
+  access?: MetaobjectAccessInput;
+  capabilities?: Partial<CapabilityConfigMap>;
+  fields: readonly FieldDefinition[];
 };
+
+export type DefinitionSchema = DefinitionSchemaEntry[];
+
+export type DefinitionByType<L extends DefinitionSchema, T extends L[number]["type"]> = Extract<L[number], { type: T }>;
 
 /**
  * --------------------------------------------------------------------------------------------
@@ -296,72 +296,81 @@ type Head<S extends string> =
 type Tail<S extends string, H extends string> =
   S extends `${H}.${infer R}` ? R : never;
 
-// Build union of all reference‐field names in D[K]
-type RefFieldNames<D extends DefinitionsSchema, K extends keyof D> =
-D[K]["fields"][number] extends infer F
-  ? F extends { name: infer N extends string; type: infer T extends string }
-    ? T extends `${string}_reference` | `list.${string}_reference`
-      ? N
+export type CamelCase<S extends string> =
+    S extends `${infer Head}_${infer Tail}`     ? `${Lowercase<Head>}${Capitalize<CamelCase<Tail>>}`
+  : S extends `${infer Head} ${infer Tail}`     ? `${Lowercase<Head>}${Capitalize<CamelCase<Tail>>}`
+  : S extends `${infer Head}-${infer Tail}`     ? `${Lowercase<Head>}${Capitalize<CamelCase<Tail>>}`
+  : Lowercase<S>;
+
+// Build union of all reference‐field keys in D[K]
+type RefFieldKeys<D extends DefinitionSchema, T extends D[number]["type"]> =
+  // pick the one entry whose `type` is T
+  DefinitionByType<D, T>["fields"][number] extends infer F
+    ? F extends { key: infer K extends string; type: infer Ty extends string }
+      ? Ty extends `${string}_reference` | `list.${string}_reference`
+        // camel-case the key  
+        ? CamelCase<K>
+        : never
       : never
-    : never
-  : never;
+    : never;
 
 // Build union of nested reference-paths for fields with `metaobjectType`
-type NestedPopulateKeys<D extends DefinitionsSchema, K extends keyof D> =
-D[K]["fields"][number] extends infer F
-  ? F extends { name: infer N extends string; type: infer T extends string; metaobjectType: infer MT extends string }
-    ? T extends `${string}_reference` | `list.${string}_reference`
-      ? `${N}.${ValidPopulatePaths<D, KeyByType<D, MT>>}`
+type NestedPopulateKeys<D extends DefinitionSchema, T extends D[number]["type"]> =
+  DefinitionByType<D, T>["fields"][number] extends infer F
+    ? F extends {
+        key: infer K extends string;
+        type: infer Ty extends string;
+        metaobjectType: infer MT extends D[number]["type"];
+      }
+      ? Ty extends `${string}_reference` | `list.${string}_reference`
+        ? `${CamelCase<K>}.${ValidPopulatePaths<D, MT>}`
+        : never
       : never
-    : never
-  : never;
+    : never;
 
 // Combine into the full union of valid populate paths
-export type ValidPopulatePaths<D extends DefinitionsSchema, K extends keyof D> = RefFieldNames<D, K> | NestedPopulateKeys<D, K>;
-
-// Reverse-lookup: given your DefinitionsSchema D and a Shopify `type` string T, find the corresponding key K in D
-type KeyByType<D extends DefinitionsSchema, T extends string> = { [K in keyof D]: D[K]["type"] extends T ? K : never }[keyof D];
+export type ValidPopulatePaths<D extends DefinitionSchema, T extends D[number]["type"]> = RefFieldKeys<D, T> | NestedPopulateKeys<D, T>;
 
 // ──────────────────────────────────────────────────────────────────────
 // Core builder
 //
 // FromDefinition<D,K,P> = “take definition K in D,
-//  make each field F.name either:
+//  make each field F.key either:
 //   • default scalar
 //   • populated scalar (Image, Metaobject)
 //   • nested FromDefinition recurse if metaobject_reference + metaobjectType
-//   • special FileMapping if file_reference + validations.fileTypes
+//   • special FileMapping if file_reference + validations.fileTypeOptions
 // ──────────────────────────────────────────────────────────────────────
 
 export type FromDefinition<
-  D extends DefinitionsSchema,
-  K extends keyof D,
+  D extends DefinitionSchema,
+  T extends D[number]["type"],
   P extends string = never
-> = { type: string } & {
-  [F in D[K]["fields"][number] as F["name"]]:
+> = {
+  [F in DefinitionByType<D, T>["fields"][number] as CamelCase<F["key"]>]:
     // a) LIST variant?
     F["type"] extends `list.${infer U extends BaseFieldType}`
       ? Array<
           U extends "metaobject_reference"
             ? F extends { metaobjectType: infer MT extends string }
-              ? FromDefinition<D, KeyByType<D, MT>, Tail<P, F["name"]>>
+              ? FromDefinition<D, MT, Tail<P, CamelCase<F["key"]>>>
               : PopulatedMap["metaobject_reference"]
           : U extends "file_reference"
-            ? F extends { validations: { fileTypes: infer FT extends readonly FileTypeVal[] } }
+            ? F extends { validations: { fileTypeOptions: infer FT extends readonly FileTypeVal[] } }
               ? FileMapping<FT[number]>
               : FileMapping<never>
           : PopulatedMap[U & keyof PopulatedMap]
         >
 
     // b) Non-list but populated?
-    : F["name"] extends Head<P>
+    : CamelCase<F["key"]> extends Head<P>
       ? (
           F["type"] extends "metaobject_reference"
             ? F extends { metaobjectType: infer MT extends string }
-              ? FromDefinition<D, KeyByType<D, MT>, Tail<P, F["name"]>>
+              ? FromDefinition<D, MT, Tail<P, CamelCase<F["key"]>>>
               : PopulatedMap["metaobject_reference"]
           : F["type"] extends "file_reference"
-            ? F extends { validations: { fileTypes: infer FT extends readonly FileTypeVal[] } }
+            ? F extends { validations: { fileTypeOptions: infer FT extends readonly FileTypeVal[] } }
               ? FileMapping<FT[number]>
               : FileMapping<never>
           : PopulatedMap[F["type"] & keyof PopulatedMap]
@@ -373,13 +382,12 @@ export type FromDefinition<
 
 // Extra type adding system information when the object is populated from Shopify
 export type FromDefinitionWithSystemData<
-  D extends DefinitionsSchema,
-  K extends keyof D,
+  D extends DefinitionSchema,
+  T extends D[number]["type"],
   P extends string = never
-> = FromDefinition<D, K, P> & {
+> = FromDefinition<D, T, P> & {
   system: {
     id: string;
-    type: string;
     handle: string;
     displayName: string;
     capabilities: MetaobjectCapabilityData;

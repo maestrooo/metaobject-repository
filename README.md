@@ -230,7 +230,7 @@ Supported options:
 To get all metaobjects of a given type, use the `findAll`:
 
 ```ts
-const event = await eventRepository.findAll('1234', opts);
+const events = await eventRepository.findAll('1234', opts);
 ```
 
 Supported options:
@@ -248,7 +248,7 @@ definitions can have more than 250 objects, use the `find` method instead for mo
 To get metaobjects of a given type, use the `find`:
 
 ```ts
-const event = await eventRepository.find(opts);
+const events = await eventRepository.find(opts);
 ```
 
 Supported options:
@@ -268,7 +268,7 @@ Supported options:
 To get a metaobject by handle, use the `delete`:
 
 ```ts
-const event = await eventRepository.delete('1234');
+const eventDeletedId = await eventRepository.delete('1234');
 ```
 
 > You can either pass a legacy ID or a GID. The library will automatically make the conversion.

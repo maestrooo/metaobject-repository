@@ -222,7 +222,12 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
     const variables = {
       input: {
         type: this.type,
-        metaobjects: input
+        metaobjects: input.forEach(metaobject => {
+          return {
+            ...metaobject,
+            fields: serializeFields(metaobject.fields)
+          }
+        })
       }
     };
 
@@ -261,7 +266,10 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
 
     const variables = {
       id: input.id,
-      metaobject: input
+      metaobject: {
+        ...input,
+        fields: serializeFields(input.fields)
+      }
     };
 
     const { metaobject, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectUpdate;
@@ -302,7 +310,10 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
         handle: input.handle,
         type: this.type,
       },
-      metaobject: input
+      metaobject: {
+        ...input,
+        fields: serializeFields(input.fields)
+      }
     };
 
     const { metaobject, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectUpsert;

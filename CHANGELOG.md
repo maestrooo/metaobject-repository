@@ -1,3 +1,7 @@
+## 0.2.1
+
+- Fix serialization of fields.
+
 ## 0.2.0
 
 - Add a store access token repositories.

@@ -12,6 +12,14 @@ export class MetafieldRepository {
   private client!: GraphQLClient<AdminOperations>;
 
   /**
+   * Set the GraphQL client to interact with Shopify API
+   */
+  withClient(client: GraphQLClient<AdminOperations>): this {
+    this.client = client;
+    return this;
+  }
+
+  /**
    * Get a single app metafield
    */
   async getAppMetafield(options: { key: string, namespace?: string }): Promise<PickedMetafield | null> {

@@ -1,3 +1,11 @@
+## 0.2.4
+
+- Fix an issue in the definition manager dependency creation.
+
+## 0.2.3
+
+- Fix invalid build.
+
 ## 0.2.2
 
 - Fix serialization of fields for `createMany`.

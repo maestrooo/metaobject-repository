@@ -20,21 +20,22 @@ export class DefinitionManager {
   }
 
   /**
-   * Create a list of definitions from the schema. It automatically handles the creation of the metaobjects definitions recursively
+   * Create a list of definitions from the schema. Definitions are created in dependency order:
+   * deeper definitions (no cross-deps) first, then dependent ones, so that validations can be
+   * resolved directly at creation time.
    */
   async createFromSchema(definitions: DefinitionSchema): Promise<void> {
-    // 1) Turn our DefinitionsSchema into GraphQL inputs, one per key
+    // 1) Build GraphQL inputs from in-memory schema
     const createInputs: Record<string, MetaobjectDefinitionCreateInput> = {};
-
-    definitions.forEach((definition) => {
-      createInputs[definition.type] = {
-        type: definition.type,
-        name: definition.name,
-        description: definition.description,
-        displayNameKey: definition.displayNameKey,
-        access: definition.access as MetaobjectAccessInput,
-        capabilities: definition.capabilities,
-        fieldDefinitions: definition.fields.map((field) => ({
+    definitions.forEach((def) => {
+      createInputs[def.type] = {
+        type: def.type,
+        name: def.name,
+        description: def.description,
+        displayNameKey: def.displayNameKey,
+        access: def.access as MetaobjectAccessInput,
+        capabilities: def.capabilities,
+        fieldDefinitions: def.fields.map((field) => ({
           name:        field.name,
           key:         field.key,
           type:        field.type,
@@ -44,91 +45,90 @@ export class DefinitionManager {
         })),
       };
     });
-    
-    // 2) Prime existing definitions by type
+
+    // 2) Seed existing definitions cache
     const existingIds: Record<string, string> = {};
+
     await Promise.all(
       Object.values(createInputs).map(async (inp) => {
         const id = await this.getDefinitionId(inp.type);
 
         if (id) {
-          existingIds[inp.type] = id
-        };
+          existingIds[inp.type] = id;
+        }
       })
     );
 
-    // 3) Which schema‐keys still need creation?
-    const toCreateKeys = Object.entries(createInputs)
-      .filter(([, inp]) => !existingIds[inp.type])
-      .map(([key]) => key);
-    if (toCreateKeys.length === 0) return;
-
-    // 4) Map from type → our schema‐key
-    const typeToKey: Record<string, string> = {};
-    for (const [key, schema] of Object.entries(definitions)) {
-      typeToKey[schema.type] = key;
+    // 3) Determine which types still need creation
+    const toCreate = Object.keys(createInputs).filter(
+      (type) => !existingIds[type]
+    );
+    
+    if (toCreate.length === 0) {
+      return;
     }
 
-    // 5) Compute dependencies among the missing ones
+    // 4) Build dependency graph among missing types
     const deps: Record<string, Set<string>> = {};
-    for (const key of toCreateKeys) {
-      const input = createInputs[key]!;
-      const depSet = new Set<string>();
-      for (const fd of input.fieldDefinitions ?? []) {
-        for (const v of fd.validations ?? []) {
-          if (v.name === 'metaobject_definition_type') {
-            const depKey = typeToKey[v.value];
-            if (depKey && toCreateKeys.includes(depKey)) {
-              depSet.add(depKey);
-            }
+    toCreate.forEach((type) => {
+      const inp = createInputs[type]!;
+      const set = new Set<string>();
+      inp.fieldDefinitions!.forEach((fd) => {
+        fd.validations!.forEach((v) => {
+          if (v.name === 'metaobject_definition_type' && toCreate.includes(v.value)) {
+            set.add(v.value);
           }
-          if (v.name === 'metaobject_definition_types') {
+          if (v.name === 'metaobject_definition_types' && toCreate.includes(v.value)) {
             try {
-              const arr: string[] = JSON.parse(v.value);
-              for (const t of arr) {
-                const depKey = typeToKey[t];
-                if (depKey && toCreateKeys.includes(depKey)) {
-                  depSet.add(depKey);
+              JSON.parse(v.value).forEach((t: string) => {
+                if (toCreate.includes(t)) {
+                  set.add(t);
                 }
-              }
+              });
             } catch {}
           }
-        }
-      }
-      deps[key] = depSet;
-    }
+        });
+      });
+      deps[type] = set;
+    });
 
-    // 6) Topo-sort into batches
-    const batches = this.topoSort(toCreateKeys, deps);
+    // 5) Topologically sort into batches with no intra-batch dependencies
+    const batches = this.topoSort(toCreate, deps);
 
-    // 7) Create, layer by layer
-    const createdIds = { ...existingIds };
-    for (const layer of batches) {
+    // 6) Create definitions in order, resolving validations at creation
+    const createdIds: Record<string, string> = { ...existingIds };
+    for (const batch of batches) {
       await Promise.all(
-        layer.map(async (key) => {
-          // clone so we can rewrite validations in place
-          const clone = structuredClone(createInputs[key]);
-          for (const fd of clone.fieldDefinitions ?? []) {
-            fd.validations = fd.validations!.map((v) => {
-              if (v.name === "metaobject_definition_type") {
-                return {
-                  name:  "metaobject_definition_id",
-                  value: createdIds[v.value]!,
-                };
-              }
-              if (v.name === "metaobject_definition_types") {
-                const types: string[] = JSON.parse(v.value);
-                const ids = types.map((t) => createdIds[t]!);
-                return {
-                  name:  "metaobject_definition_ids",
-                  value: JSON.stringify(ids),
-                };
-              }
-              return v;
-            });
-          }
-          const newId = await this.createDefinition(clone);
-          createdIds[clone.type] = newId;
+        batch.map(async (type) => {
+          const original = createInputs[type]!;
+          // Clone and resolve validation references to IDs
+          const resolvedInput: MetaobjectDefinitionCreateInput = {
+            ...original,
+            fieldDefinitions: original.fieldDefinitions!.map((fd) => ({
+              ...fd,
+              validations: fd.validations!.flatMap((v) => {
+                if (v.name === 'metaobject_definition_type') {
+                  return [{
+                    name:  'metaobject_definition_id',
+                    value: createdIds[v.value]!,
+                  }];
+                }
+                if (v.name === 'metaobject_definition_types') {
+                  const types: string[] = JSON.parse(v.value as string);
+                  const ids = types.map((t) => createdIds[t]!);
+                  return [{
+                    name:  'metaobject_definition_ids',
+                    value: JSON.stringify(ids),
+                  }];
+                }
+                return [v];
+              }),
+            })),
+          };
+
+          // Create and cache the new ID
+          const newId = await this.createDefinition(resolvedInput);
+          createdIds[type] = newId;
         })
       );
     }

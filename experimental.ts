@@ -7,21 +7,39 @@ const repo = new ObjectRepository<Definitions, "$app:test">(definitions, "$app:t
 
 // 1) everything as plain strings
 const plain = await repo.findById("123");
-plain.icon;
+
+if (plain) {
+  plain.icon;
+}
 // type of `plain.icon` is string
 
-// 2) populate only `icon` (uses validations to pick Image|Video|…)
+// 2) populate only `icon`
 const withIcon = await repo.findById("123", { populate: ["icon"] });
-// type of `withIcon.icon` is Image | Video (per validations in definitions)
 
-withIcon.icon;
+if (withIcon) {
+  withIcon.icon;
+}
+
 
 withIcon.products.forEach(product => {
   product.name;
 })
 
 // 3) populate a nested metaobject_reference
-const deep = await repo.findById("123", { populate: ["genericObj", "genericObj"] });
+const deep = await repo.findById("123", { populate: [""] });
+
+
+
+
+
+
+
+
+
+
+
+
+
 // `deep.store_type.another` is fully populated `{ name: string }`
 deep.genericObj.genericObj;
 // 4) mix-and-match

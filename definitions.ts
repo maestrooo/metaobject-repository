@@ -61,7 +61,7 @@ export const definitions = [
         name:        "icon",
         key: "icon",
         type:        "file_reference",
-        validations: { fileTypeOptions: ["Video"] },
+        validations: { fileTypeOptions: ["Image"] },
       },
       { name:       "generic Obj", key: "generic_obj", type: "metaobject_reference", metaobjectType: "$app:baz" },
       { name:       "products", key: "products", type: "list.product_reference" },

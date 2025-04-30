@@ -1,7 +1,7 @@
 {
-  "name": "metaobject-orm",
+  "name": "metaobject-repository",
   "version": "1.0.0",
-  "description": "A simple ORM to manipulate Shopify metaobjects and metafields.",
+  "description": "A simple repository to manipulate Shopify metaobjects and metafields.",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/maestrooo/metaobject-orm.git"
+    "url": "git+https://github.com/maestrooo/metaobject-repository.git"
   },
   "keywords": [
     "graphql",
@@ -25,9 +25,9 @@
   "author": "Michael Gallego",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/maestrooo/metaobject-orm/issues"
+    "url": "https://github.com/maestrooo/metaobject-repository/issues"
   },
-  "homepage": "https://github.com/maestrooo/metaobject-orm#readme",
+  "homepage": "https://github.com/maestrooo/metaobject-repository#readme",
   "dependencies": {
     "raku-ql": "^1.2.5",
     "snake-camel": "^1.0.9"

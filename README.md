@@ -1,20 +1,20 @@
 
-# Metaobject-ORM Documentation
+# Metaobject-Repository Documentation
 
-## What is Metaobject-ORM?
+## What is Metaobject-Repository?
 
-**Metaobject-ORM** is a library to interact more easily with Shopify metaobjects, with a fully typed approach.
+**Metaobject-Repository** is a library to interact more easily with Shopify metaobjects, with a fully typed approach.
 
-## Why Use Metaobject-ORM?
+## Why Use Metaobject-Repository?
 
-Metaobject-ORM helps structure and simplify interactions with Shopify metaobjects. It provides decorators and an intuitive API. If your interaction with metaobjects is limited or dynamic, directly using the GraphQL API might be preferable.
+Metaobject-Repository helps structure and simplify interactions with Shopify metaobjects. It provides decorators and an intuitive API. If your interaction with metaobjects is limited or dynamic, directly using the GraphQL API might be preferable.
 
 ## Installation
 
 To install the library, use npm:
 
 ```shell
-npm i metaobject-orm
+npm i metaobject-repository
 ```
 
 ## Schema
@@ -28,7 +28,7 @@ To start with, define a schema for your metaobjects. The schema must satisfies w
 // File: definitions.ts
 // ────────────────────────────────────────────────────────────────────────
 
-import { DefinitionSchema } from "metaobject-orm";
+import { DefinitionSchema } from "metaobject-repository";
 
 export const definitions = [
   {
@@ -97,7 +97,7 @@ When your app is installed, it is needed to create the definitions for all metao
 and use the `createFromSchema` method (your definition schema must be exported):
 
 ```ts
-import { definitionManager } from "metaobject-orm";
+import { definitionManager } from "metaobject-repository";
 import { definitions } from "your-definitions";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -129,7 +129,7 @@ It might be needed to alter a definition beyond the fixed schema. To do that, th
 accepts a type (so you don't have to get the ID yourself) and a compliant [`MetaobjectDefinitionUpdateInput`](https://shopify.dev/docs/api/admin-graphql/unstable/input-objects/MetaobjectDefinitionUpdateInput) payload:
 
 ```ts
-import { definitionManager } from "metaobject-orm";
+import { definitionManager } from "metaobject-repository";
 import { definitions } from "your-definitions";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -523,7 +523,7 @@ you access to the underlying builder:
 
 ```ts
 import { FieldBuilder } from "raku-ql";
-import { OnPopulateFunc, FieldDefinition } from "metaobject-orm":
+import { OnPopulateFunc, FieldDefinition } from "metaobject-repository":
 
 const onPopulate: OnPopulateFunc = (fieldDefinition: FieldDefinition, fieldBuilder: FieldBuilder) => {
   // FieldDefinition: { name: string, type: string, key: string, required: boolean, description: string, validations: [] }

@@ -1,0 +1,8 @@
+export { definitionManager, DefinitionManager } from './definition-manager';
+export { MetaobjectRepository } from './metaobject-repository';
+export { metafieldRepository, MetafieldRepository } from './metafield-repository';
+
+export { UserErrorsException } from './exception/user-errors-exception';
+
+export type { FieldDefinition, DefinitionSchemaEntry, DefinitionSchema } from './types/definitions';
+export type { OnPopulateFunc } from './types/metaobject-repository';

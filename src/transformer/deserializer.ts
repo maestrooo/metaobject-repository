@@ -5,6 +5,7 @@ export function deserialize<T>(metaobject: Metaobject): T {
   let data: { [key: string]: any } = {
     system: {
       id: metaobject.id,
+      type: metaobject.type,
       handle: metaobject.handle,
       displayName: metaobject.displayName,
       createdAt: new Date(metaobject.createdAt),
@@ -35,7 +36,9 @@ export function deserialize<T>(metaobject: Metaobject): T {
       }
     }
 
-    if (valueForKey.hasOwnProperty('reference')) {
+    if (valueForKey === null) {
+      // In case of mixed references some references might not exist on a given type, so we simply ignore
+    } else if (valueForKey.hasOwnProperty('reference')) {
       data[keyName] = serializeReference(valueForKey['reference']);
     } else if (valueForKey.hasOwnProperty('references')) {
       data[keyName] = valueForKey['references']?.['nodes'].map(serializeReference) ?? [];

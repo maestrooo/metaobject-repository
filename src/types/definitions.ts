@@ -1,7 +1,8 @@
 import { 
   MetaobjectCapabilitiesOnlineStore, MetaobjectCapabilitiesPublishable, MetaobjectCapabilitiesRenderable, MetaobjectCapabilitiesTranslatable, 
   MetaobjectCapabilityOnlineStoreInput, MetaobjectCapabilityPublishableInput, GenericFile, Image, Metaobject, MetaobjectAccessInput, 
-  Product, Video, Collection, Customer, Page, ProductVariant, TaxonomyValue, MetaobjectCapabilityData, MetaobjectThumbnail
+  Product, Video, Collection, Customer, Page, ProductVariant, TaxonomyValue, MetaobjectCapabilityData, MetaobjectThumbnail,
+  Company
 } from "~/types/admin.types";
 
 /**
@@ -143,7 +144,7 @@ export type CapabilityInputMap = {
  
 type BaseFieldType = 
   FieldTypeWithValidation | "boolean" | "color" | "link" | "money" | "rich_text_field" | 
-  "collection_reference" | "customer_reference" | "file_reference" | "metaobject_reference" | "mixed_reference" | 
+  "collection_reference" | "customer_reference" | "company_reference" | "file_reference" | "metaobject_reference" | "mixed_reference" | 
   "page_reference" | "product_reference" | "product_taxonomy_value_reference" | "variant_reference";
 type FieldType = BaseFieldType | `list.${BaseFieldType}`;
 type ListElement<T extends FieldType> = T extends `list.${infer U}` ? U : never;
@@ -174,11 +175,11 @@ type FieldDefinitionMap = {
       : {})
   // only add `metaobjectType` on metaobject_reference
   & (T extends "metaobject_reference" | "list.metaobject_reference"
-      ? { metaobjectType?: string }
+      ? { readonly metaobjectType?: string }
       : {})
   // only add `metaobjectTypes` on mixed_reference
   & (T extends "mixed_reference" | "list.mixed_reference"
-    ? { metaobjectTypes?: string[] }
+    ? { readonly metaobjectTypes?: readonly string[] }
     : {});
 };
 
@@ -231,6 +232,7 @@ export type DefaultMap = {
   weight:                           Weight;
   collection_reference:             string;
   customer_reference:               string;
+  company_reference:                string;
   file_reference:                   string;
   metaobject_reference:             string;
   mixed_reference:                  string;
@@ -258,15 +260,16 @@ export type PopulatedMap = {
   url:                              string;
   volume:                           Volume;
   weight:                           Weight;
-  collection_reference:             Collection;
-  customer_reference:               Customer;
+  collection_reference:             Pick<Collection, 'id' | 'handle' | 'title' | 'description' | 'hasProduct' | 'sortOrder' | 'updatedAt' | 'templateSuffix' | 'image'>;
+  customer_reference:               Pick<Customer, 'id' | 'displayName' | 'amountSpent' | 'numberOfOrders' | 'email' | 'verifiedEmail' | 'phone' | 'createdAt' | 'updatedAt' | 'locale' | 'image'>;
+  company_reference:                Pick<Company, 'id' | 'externalId' | 'name' | 'lifetimeDuration' | 'ordersCount' | 'totalSpent' | 'createdAt' | 'updatedAt'>,
   file_reference:                   Image; // Fallback to image
   metaobject_reference:             Metaobject;
   mixed_reference:                  Metaobject;
-  page_reference:                   Page;
-  product_reference:                Product;
-  product_taxonomy_value_reference: TaxonomyValue;
-  variant_reference:                ProductVariant;
+  page_reference:                   Pick<Page, 'id' | 'handle' | 'title' | 'body' | 'isPublished' | 'createdAt' | 'updatedAt' | 'templateSuffix'>;
+  product_reference:                Pick<Product, 'id' | 'handle' | 'title' | 'productType' | 'status' | 'description' | 'vendor' | 'updatedAt' | 'createdAt' | 'publishedAt' | 'tags' | 'hasOnlyDefaultVariant' | 'variantsCount' | 'templateSuffix' | 'featuredImage'>;
+  product_taxonomy_value_reference: Pick<TaxonomyValue, 'id' | 'name'>;
+  variant_reference:                Pick<ProductVariant, 'id' | 'title' | 'displayName' | 'sku' | 'price' | 'compareAtPrice' | 'availableForSale' | 'inventoryQuantity' | 'barcode' | 'createdAt' | 'updatedAt' | 'image'>;
 };
 
 // 2) “fileTypes” → exact mapping (eg.: if we choose Image, only resolve as Image)
@@ -317,16 +320,18 @@ type RefFieldKeys<D extends DefinitionSchema, T extends D[number]["type"]> =
 // Build union of nested reference-paths for fields with `metaobjectType`
 type NestedPopulateKeys<D extends DefinitionSchema, T extends D[number]["type"]> =
   DefinitionByType<D, T>["fields"][number] extends infer F
-    ? F extends {
-        key: infer K extends string;
-        type: infer Ty extends string;
-        metaobjectType: infer MT extends D[number]["type"];
-      }
+  ? F extends { key: infer K extends string; type: infer Ty extends string }
       ? Ty extends `${string}_reference` | `list.${string}_reference`
-        ? `${CamelCase<K>}.${ValidPopulatePaths<D, MT>}`
-        : never
+          ? // single‐type case:
+            F extends { metaobjectType: infer MT extends D[number]["type"] }
+              ? `${CamelCase<K>}.${ValidPopulatePaths<D, MT>}`
+            // mixed‐type case:
+              : F extends { metaobjectTypes: infer MTs extends readonly D[number]["type"][] }
+                ? `${CamelCase<K>}.${ValidPopulatePaths<D, MTs[number]>}`
+              : never
+          : never
       : never
-    : never;
+  : never;
 
 // Combine into the full union of valid populate paths
 export type ValidPopulatePaths<D extends DefinitionSchema, T extends D[number]["type"]> = RefFieldKeys<D, T> | NestedPopulateKeys<D, T>;
@@ -339,6 +344,7 @@ export type ValidPopulatePaths<D extends DefinitionSchema, T extends D[number]["
 //   • default scalar
 //   • populated scalar (Image, Metaobject)
 //   • nested FromDefinition recurse if metaobject_reference + metaobjectType
+//   • nested FromDefinition recurse if mixed_reference + metaobjectTypes
 //   • special FileMapping if file_reference + validations.fileTypeOptions
 // ──────────────────────────────────────────────────────────────────────
 
@@ -348,36 +354,50 @@ export type FromDefinition<
   P extends string = never
 > = {
   [F in DefinitionByType<D, T>["fields"][number] as CamelCase<F["key"]>]:
-    // a) LIST variant?
+    // a) LIST fields
     F["type"] extends `list.${infer U extends BaseFieldType}`
-      ? Array<
-          U extends "metaobject_reference"
+      ? (
+          // mixed_reference → array of union
+          U extends "mixed_reference"
+            ? F extends { metaobjectTypes: infer MTE extends readonly D[number]["type"][] }
+              ? Array<FromDefinitionWithSystemData<D, MTE[number], Tail<P, CamelCase<F["key"]>>>>
+              : Array<PopulatedMap["mixed_reference"]>
+          // metaobject_reference → array of object
+          : U extends "metaobject_reference"
             ? F extends { metaobjectType: infer MT extends string }
-              ? FromDefinition<D, MT, Tail<P, CamelCase<F["key"]>>>
-              : PopulatedMap["metaobject_reference"]
+              ? Array<FromDefinitionWithSystemData<D, MT, Tail<P, CamelCase<F["key"]>>>>
+              : Array<PopulatedMap["metaobject_reference"]>
+          // file_reference → array of FileMapping
           : U extends "file_reference"
             ? F extends { validations: { fileTypeOptions: infer FT extends readonly FileTypeVal[] } }
-              ? FileMapping<FT[number]>
-              : FileMapping<never>
-          : PopulatedMap[U & keyof PopulatedMap]
-        >
-
-    // b) Non-list but populated?
-    : CamelCase<F["key"]> extends Head<P>
-      ? (
-          F["type"] extends "metaobject_reference"
-            ? F extends { metaobjectType: infer MT extends string }
-              ? FromDefinition<D, MT, Tail<P, CamelCase<F["key"]>>>
-              : PopulatedMap["metaobject_reference"]
-          : F["type"] extends "file_reference"
-            ? F extends { validations: { fileTypeOptions: infer FT extends readonly FileTypeVal[] } }
-              ? FileMapping<FT[number]>
-              : FileMapping<never>
-          : PopulatedMap[F["type"] & keyof PopulatedMap]
+              ? Array<FileMapping<FT[number]>>
+              : Array<FileMapping<never>>
+          // fallback → array of default/populated scalar
+          : Array<PopulatedMap[U & keyof PopulatedMap]>
         )
-
-    // c) Fallback to default scalar (which is always a string)
-    : DefaultMap[F["type"] & keyof DefaultMap];
+      // b) NON-list & populated
+      : CamelCase<F["key"]> extends Head<P>
+        ? (
+            // mixed_reference → union
+            F["type"] extends "mixed_reference"
+              ? F extends { metaobjectTypes: infer MTE extends readonly D[number]["type"][] }
+                ? FromDefinitionWithSystemData<D, MTE[number], Tail<P, CamelCase<F["key"]>>>
+                : PopulatedMap["mixed_reference"]
+            // metaobject_reference → object
+            : F["type"] extends "metaobject_reference"
+              ? F extends { metaobjectType: infer MT extends string }
+                ? FromDefinitionWithSystemData<D, MT, Tail<P, CamelCase<F["key"]>>>
+                : PopulatedMap["metaobject_reference"]
+            // file_reference → FileMapping
+            : F["type"] extends "file_reference"
+              ? F extends { validations: { fileTypeOptions: infer FT extends readonly FileTypeVal[] } }
+                ? FileMapping<FT[number]>
+                : FileMapping<never>
+            // fallback → populated scalar
+            : PopulatedMap[F["type"] & keyof PopulatedMap]
+          )
+        // c) fallback → default scalar
+        : DefaultMap[F["type"] & keyof DefaultMap];
 };
 
 // Extra type adding system information when the object is populated from Shopify

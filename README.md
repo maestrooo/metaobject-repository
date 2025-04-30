@@ -70,8 +70,8 @@ export const definitions = [
 ] as const satisfies DefinitionSchema;
 
 /** Handy alias for your definitions type. */
-export const eventRepository = new ObjectRepository(definitions, "$app:event");
-export const hostRepository = new ObjectRepository(definitions, "$app:host");
+export const eventRepository = new MetaobjectRepository(definitions, "$app:event");
+export const hostRepository = new MetaobjectRepository(definitions, "$app:host");
 ```
 
 > Don't forget the `as const satisfies DefinitionSchema`, this is essential for enabling full-typing support.
@@ -88,7 +88,7 @@ After defining your schema, we recommend that you export one object repository f
 with. Make sure to pass the type to have all the magic happen:
 
 ```ts
-export const eventRepository = new ObjectRepository(definitions, "$app:event");
+export const eventRepository = new MetaobjectRepository(definitions, "$app:event");
 ```
 
 ### Creating the schema
@@ -164,7 +164,7 @@ it can be accessed globally:
 definition.ts:
 
 ```ts
-export const eventRepository = new ObjectRepository(definitions, "$app:event");
+export const eventRepository = new MetaobjectRepository(definitions, "$app:event");
 ```
 
 app.ts:
@@ -445,6 +445,7 @@ const event = await eventRepository.findById('1234', opts);
 
 event.system.id; // Get the ID of the metaobject
 event.system.handle; // Get the handle of the metaobject
+event.system.type; // Get the type of the metaobject (useful when dealing with mixed references)
 event.system.displayName; // Get the display name
 event.system.createdAt; // Get the creation date
 event.system.updatedAt; // Get the updated date
@@ -503,13 +504,14 @@ event.featuredProduct: // Type as Product
 To avoid performance problems, when creating a reference to a built-in type, the library will limit the
 fields it gets. Here is the list of default fields being available when populating a reference:
 
-* Product reference: 'id', 'handle', 'title', 'vendor', 'updatedAt'
-* Collection reference: 'id', 'handle', 'title', 'updatedAt'
-* Customer reference: 'id', 'displayName', 'email', 'phone', 'updatedAt'
-* Metaobject reference / mixed reference (that are not owned by your app): 'id', 'handle', 'displayName', 'updatedAt'
-* Page reference: 'id', 'handle', 'title', 'updatedAt'
+* Product reference: 'id', 'handle', 'title', 'productType', 'status', 'description', 'vendor', 'updatedAt', 'createdAt', 'publishedAt', 'tags','hasOnlyDefaultVariant', 'variantsCount', 'templateSuffix', 'featuredImage'.
+* Collection reference: 'id', 'handle', 'title', 'description', 'hasProduct', 'sortOrder', 'updatedAt', 'templateSuffix', 'image'
+* Customer reference: 'id', 'displayName', 'amountSpent', 'numberOfOrders', 'email', 'verifiedEmail', 'phone', 'createdAt', 'updatedAt', 'locale', 'image'
+* Company reference: 'id', 'externalId', 'name', 'lifetimeDuration', 'ordersCount', 'totalSpent', 'createdAt', 'updatedAt'
+* Metaobject reference / mixed reference (that are not owned by your app): 'id', 'type', 'handle', 'displayName', 'createdAt', 'updatedAt', 'fields'
+* Page reference: 'id', 'handle', 'title', 'body', 'isPublished', 'createdAt', 'updatedAt', 'templateSuffix'
 * Product taxonomy value: 'id', 'name'
-* Variant reference: 'id', 'title', 'sku', 'price', 'inventoryQuantity', 'barcode'
+* Variant reference: 'id', 'title', 'displayName', 'sku', 'price', 'compareAtPrice', 'availableForSale', 'inventoryQuantity', 'barcode', 'createdAt',             'updatedAt', 'image'
 * File reference:
   * If "Image": 'id', 'image.id', 'image.altText', 'image.height', 'image.width', 'image.url'
   * If "Video": 'id', 'duration', 'sources.format', 'sources.fileSize', 'sources.height', 'sources.width', 'sources.mimeType', 'sources.url',
@@ -559,3 +561,36 @@ for the fields.
 
 > As of today, references to built-in types are not fully typed, so if you dynamically change the fields that you retrieve,
 this won't be reflected in the type.
+
+## Metafield repository
+
+While the library goal is to interact with metaobjects, it gives a thin layer for retrieving app metafields, saving metafields and
+deleting metafields. To do that, import the `metafieldRepository`:
+
+```ts
+import { metafieldRepository } from "metaobject-repository";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+
+  metafieldRepository.withClient(admin.graphql); // <== Don't forget
+
+  // Get an app metafield
+  const appMetafield = await metafieldRepository.getAppMetafield({ key: 'foo' });
+
+  // Get a list of metafields
+  const { items, pageInfo } = await metafieldRepository.getMetafields({ owner: 'gid://shopify/Product/123', first: 50 });
+
+  // Save metafields
+  await metafieldRepository.setMetafields([
+    { type: 'single_line_text_field', key: 'foo', namespace: 'bar', value: '123' }
+  ]);
+
+  // Delete metafields
+  await metafieldRepository.deleteMetafields([
+    { key: 'foo', namespace: 'bar', ownerId: 'gid://shopify/Product/123' }
+  ])
+
+  return null;
+};
+```

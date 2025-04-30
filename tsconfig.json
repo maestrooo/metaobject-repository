@@ -1,9 +1,12 @@
 {
-  "include": ["types", "./src/**/*.ts"],
+  "files": ["src/index.ts"],
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
     "outDir": "./dist",
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
     "esModuleInterop": true,
     "experimentalDecorators": false,
     "forceConsistentCasingInFileNames": true,

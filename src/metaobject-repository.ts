@@ -1,6 +1,3 @@
-/// ──────────────────────────────────────────────────────────────────────
-/// 5) The ObjectRepository class
-
 import { GraphQLClient } from "node_modules/@shopify/shopify-app-remix/dist/ts/server/clients/types";
 import { AdminOperations } from "@shopify/admin-api-client";
 import { FieldBuilder, QueryBuilder } from "raku-ql";

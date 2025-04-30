@@ -9,6 +9,11 @@
 
 Metaobject-Repository helps structure and simplify interactions with Shopify metaobjects. It provides decorators and an intuitive API. If your interaction with metaobjects is limited or dynamic, directly using the GraphQL API might be preferable.
 
+While this library is specialized for retrieving metaobjects, it also offers a thin wrapper around metafields and storefront access tokens, to make it easier
+to work with.
+
+> The goal of this library is NOT to offer a repository for all possible kind of resources, so we don't plan to add more repositories.
+
 ## Installation
 
 To install the library, use npm:
@@ -622,6 +627,35 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   await metafieldRepository.deleteMetafields([
     { key: 'foo', namespace: 'bar', ownerId: 'gid://shopify/Product/123' }
   ])
+
+  return null;
+};
+```
+
+## Storefront tokens repository
+
+In addition to the metafield repository, the library also offers a thin wrapper to manage storefront access tokens, which is often
+required when working with Liquid.
+
+```ts
+import { storefrontTokenRepository } from "metaobject-repository";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+
+  storefrontTokenRepository.withClient(admin.graphql); // <== Don't forget
+
+  // Create a new token by title
+  const accessToken = await storefrontTokenRepository.createToken({ title: 'Foo' });
+
+  // Upsert a new token by title (create it if not exists, otherwise return it)
+  const accessToken = await storefrontTokenRepository.upsertToken({ title: 'Foo' });
+
+  // Delete an existing token by title
+  await storefrontTokenRepository.deleteToken({ title: 'Foo' });
+
+  // Get all existing storefront tokens for an app
+  const tokens = await storefrontTokenRepository.getExistingTokens();
 
   return null;
 };

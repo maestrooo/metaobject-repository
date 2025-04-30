@@ -610,6 +610,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   // Save metafields
   await metafieldRepository.setMetafields([
+    { type: 'single_line_text_field', key: 'foo', namespace: 'bar', value: '123', ownerId: 'gid://shopify/Product/123' }
+  ]);
+
+  // Save app metafields (when doing so, you don't have to set the ownerId, it is retrieved under the hood automatically)
+  await metafieldRepository.setAppMetafields([
     { type: 'single_line_text_field', key: 'foo', namespace: 'bar', value: '123' }
   ]);
 

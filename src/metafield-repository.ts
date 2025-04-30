@@ -4,12 +4,14 @@ import { Metafield, MetafieldIdentifierInput, MetafieldsSetInput, PageInfo } fro
 import { FindOptions } from "./types/metafield-repository";
 
 type PickedMetafield = Pick<Metafield, 'id' | 'compareDigest' | 'type' | 'namespace' | 'key' | 'jsonValue'>;
+type MakeOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 /**
  * Provide a thin wrapper around metafields to easily manipulate them
  */
 export class MetafieldRepository {
   private client!: GraphQLClient<AdminOperations>;
+  private appInstallationIdPromise?: Promise<any>;
 
   /**
    * Set the GraphQL client to interact with Shopify API
@@ -96,6 +98,20 @@ export class MetafieldRepository {
   }
 
   /**
+   * Helper to create app metafields. You don't need to explicitly pass the owner ID, as it is retrieved
+   * automatically from the current app installation.
+   */
+  async setAppMetafields(input: MakeOptional<MetafieldsSetInput, 'ownerId'>[]): Promise<void> {
+    const appInstallationId = await this.getAppInstallationId();
+
+    input.forEach((item) => {
+      item.ownerId = appInstallationId;
+    });
+
+    await this.setMetafields(input as MetafieldsSetInput[]);
+  }
+
+  /**
    * Upsert one or multiple metafields
    */
   async setMetafields(input: MetafieldsSetInput[]): Promise<void> {
@@ -157,6 +173,28 @@ export class MetafieldRepository {
       console.warn(userErrors);
       throw new Error(`Cannot delete metafields. Reason: ${userErrors[0].message}`);
     }
+  }
+
+  /**
+   * Helper to get the app installation ID
+   */
+  private getAppInstallationId(): Promise<string> {
+    if (!this.appInstallationIdPromise) {
+      this.appInstallationIdPromise = (async () => {
+        const response = await this.client(
+          `#graphql
+           query GetAppInstallationId {
+             currentAppInstallation {
+               id
+             }
+           }`
+        );
+        
+        return (await response.json()).data.currentAppInstallation.id;
+      })();
+    }
+
+    return this.appInstallationIdPromise;
   }
 }
 

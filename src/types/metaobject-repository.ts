@@ -24,18 +24,24 @@ type RequiredKeys<D extends DefinitionSchema, T extends D[number]["type"]> =
 type OptionalKeys<D extends DefinitionSchema, T extends D[number]["type"]> =
   Exclude<FieldDef<D, T>["key"], RequiredKeys<D, T>>;
 
-type FieldsInput<D extends DefinitionSchema, T extends D[number]["type"]> =
-  // required props
-  { [P in RequiredKeys<D, T> as CamelCase<P>]:
-      DefaultMap[
-        Extract<FieldDef<D, T>, { key: P }>["type"] & keyof DefaultMap
-      ]
-  }
-  // optional props
-  & { [P in OptionalKeys<D,T> as CamelCase<P>]?: 
-      DefaultMap[
-        Extract<FieldDef<D, T>, { key: P }>["type"] & keyof DefaultMap
-      ]
+type FieldTypeOf<D extends DefinitionSchema, T extends D[number]["type"], P extends string> =
+  Extract<
+    DefinitionByType<D, T>["fields"][number],
+    { key: P }
+  >["type"];
+
+  type FieldsInput<D extends DefinitionSchema, T extends D[number]["type"]> = {
+    // required fields
+    [P in RequiredKeys<D, T> as CamelCase<P>]:
+      FieldTypeOf<D, T, P> extends `list.${infer U}`
+        ? Array<DefaultMap[U & keyof DefaultMap]>        // list → array
+        : DefaultMap[FieldTypeOf<D, T, P> & keyof DefaultMap];  // scalar
+  } & {
+    // optional fields
+    [P in OptionalKeys<D, T> as CamelCase<P>]?: 
+      FieldTypeOf<D, T, P> extends `list.${infer U}`
+        ? Array<DefaultMap[U & keyof DefaultMap]>
+        : DefaultMap[FieldTypeOf<D, T, P> & keyof DefaultMap];
   };
 
 // Build capabilities‐input for only those defined

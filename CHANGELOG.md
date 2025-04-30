@@ -1,3 +1,7 @@
+## 0.2.5
+
+- Fix an inference data for the `CreateInput`, `UpsertInput` and `UpdateInput` on list fields.
+
 ## 0.2.4
 
 - Fix an issue in the definition manager dependency creation.

@@ -1,3 +1,7 @@
+## 0.2.2
+
+- Fix serialization of fields for `createMany`.
+
 ## 0.2.1
 
 - Fix serialization of fields.

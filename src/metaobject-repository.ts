@@ -222,7 +222,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
     const variables = {
       input: {
         type: this.type,
-        metaobjects: input.forEach(metaobject => {
+        metaobjects: input.map(metaobject => {
           return {
             ...metaobject,
             fields: serializeFields(metaobject.fields)

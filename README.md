@@ -562,6 +562,33 @@ for the fields.
 > As of today, references to built-in types are not fully typed, so if you dynamically change the fields that you retrieve,
 this won't be reflected in the type.
 
+### Data validation
+
+When creating, updating or upserting a metaobject, please keep in mind that no validation beyond the validation defined on Shopify
+will happen. We recommend that you always validate your data (using a library like `zod`) before you push data. Here is an example:
+
+```ts
+import * as z from "zod";
+
+export const eventSchema = z.interface({
+  name: z.string().nonempty().max(255),
+  type: z.enum(['Food', 'Social', 'Ecology']),
+});
+
+export const attributeCreateInput = attributeSchema;
+
+// In your action:
+
+const result = attributeCreateInput.safeParse(body);
+
+if (!result.success) {
+  return { errors: result.error };
+}
+
+// The data is now validated and safe
+const event = await eventRepository.create({ handle: '123', fields: result.data });
+```
+
 ## Metafield repository
 
 While the library goal is to interact with metaobjects, it gives a thin layer for retrieving app metafields, saving metafields and

@@ -45,7 +45,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
     const definition = this.getDefinitionSchemaEntry(this.type);
 
     definition.fields.forEach((field) => {
-      data[camel(field.key)] = null;
+      data[camel(field.key)] = field.type.startsWith('list.') ? [] : null;
     });
 
     return data;

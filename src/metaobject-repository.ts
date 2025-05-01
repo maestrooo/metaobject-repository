@@ -292,7 +292,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
       });
 
     const variables = {
-      id: input.id,
+      id: this.transformId(input.id),
       metaobject: {
         ...input,
         fields: serializeFields(input.fields)

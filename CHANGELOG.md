@@ -1,3 +1,7 @@
+## 0.3.5
+
+- Fix a bug where the id was not properly converted to GID when using legacy ID in the `update` method.
+
 ## 0.3.3/0.3.4
 
 - I'm not 100% sure on what would be the best way to handle that, but actually I am changing the null values again: list fields will actually default to [] when returned, while scalar value will resolve to null (as per the change introduced in 0.3.2).

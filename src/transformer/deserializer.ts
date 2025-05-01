@@ -29,7 +29,7 @@ export function deserialize<T>(metaobject: Metaobject): T {
     const valueForKey = metaobject[key];
 
     const serializeReference = (valueForKey: any) => {
-      if (valueForKey['__typename'] === 'Metaobject') {
+      if (valueForKey?.['__typename'] === 'Metaobject') {
         return deserialize(valueForKey);
       } else {
         return valueForKey;

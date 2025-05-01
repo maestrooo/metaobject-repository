@@ -1,3 +1,7 @@
+## 0.3.1
+
+- Fix an issue during deserialization for an empty reference.
+
 ## 0.3.0
 
 - A new `getEmptyObject` method has been added on repositories, which allows creating an empty object for creating forms, while preserving all the typing system.

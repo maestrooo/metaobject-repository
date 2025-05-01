@@ -1,3 +1,10 @@
+## 0.3.0
+
+- A new `getEmptyObject` method has been added on repositories, which allows creating an empty object for creating forms, while preserving all the typing system.
+- A new `createFormState` method has been added to make it easier to work with forms.
+- [BC] Null values are now deserialized as string (for non-list fields) and as empty array for list fields. This makes it easier to work with forms.
+- [BC] The `system` is now marked as read-only, as it should not be edited.
+
 ## 0.2.5
 
 - Fix an inference data for the `CreateInput`, `UpsertInput` and `UpdateInput` on list fields.

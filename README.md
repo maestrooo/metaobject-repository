@@ -660,3 +660,165 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return null;
 };
 ```
+
+## Recipes
+
+### Creating empty object
+
+It is often needed, in loaders, to create an empty object that will be populated in a form. To ensure you get a typed object, you can use the
+utility method `getEmptyObject` defined in all repositories. This will create an object with all properties set to empty string (for non-list) fields
+or as an empty array for list fields:
+
+```ts
+export const loader = async ({ request, params }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+  let event = null;
+
+  if (params.id === 'new') {
+    event = eventRepository.getEmptyObject();
+  } else {
+    event = await eventRepository.withClient(admin.graphql).findById(params.id);
+  }
+
+  return { event };
+}
+```
+
+When creating an empty object, the `system` will be set to null, as it has not yet been saved to Shopify. This can be used to differentiate an
+object that has been persisted yet with an object that has not.
+
+> If you are using the `populate` param on the find* methods, then the type won't match, for now I don't know what would be the best solution to
+solve this issue.
+
+### Creating a form state
+
+When using repositories methods, the object is fully expands, and can contain a deep object. The library also adds various information such as the system
+key. At the end, an object might look like this:
+
+```ts
+{
+  system: {
+    id: "gid://shopify/Metaobject/123",
+    handle: "my-handle",
+    // other system data
+  },
+  title: "bar",
+  icon: {
+    id: "gid://shopify/MediaImage/456",
+    altText: "Some text",
+    // other properties...
+  },
+  product: {
+    id: "gid://shopify/Product/678"
+  }
+}
+```
+
+This makes it hard when working with form, as when saving a metaobject we need to have a flat hierarchy. To make it easier to work with forms, you can
+use the `createFormState` method, which will flatten the data, while preserving fully typed object:
+
+```ts
+const formState = createFormState(myObject);
+
+/* Will be this:
+{
+  id: "gid://shopify/Metaobject/123",
+  handle: "my-handle",
+  title: "bar",
+  icon: "gid://shopify/MediaImage/456",
+  product: "gid://shopify/Product/678"
+}
+*/
+
+// You can also define a subset of fields:
+const formState = createFormState(myObject, ['id', 'title']);
+
+/* Will be this:
+{
+  id: "gid://shopify/Metaobject/123",
+  title: "bar"
+}
+*/
+```
+
+> If the object is not persisted yet (for instance if you call this method on an empty object created through `getEmptyObject`), then the `id` and
+`handle` will always be null.
+
+### Typing loader data
+
+Let's say that you have a loader in a `index.ts` route, that returns a list of events, with some populated properties:
+
+```ts
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+
+  eventRepository.withClient(admin.graphql);
+
+  return { 
+    events: await eventRepository.findAll({ populate: ["icon"] }) 
+  };
+}
+
+export default function Events() {
+  const { events } = useLoaderData<typeof loader>();
+
+  // events is properly typed
+}
+```
+
+Metaobject-Repository will automatically infer the correct type to provide autocompletion. However, if you pass this property
+to a child component, then the typing will be lost:
+
+index.ts
+```ts
+export default function Events() {
+  const { events } = useLoaderData<typeof loader>();
+
+  <EventsIndexTable events={ events } />
+}
+```
+
+list.ts
+```ts
+export function EventsIndexTable({ events }) {
+  // Typing is lost here!!
+}
+```
+
+The problem is that recreating the typing is complex. To preserve the typing, the recommended approach is to infer the generated
+type from the parent, and re-use it on the child:
+
+index.ts
+```ts
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+
+  eventRepository.withClient(admin.graphql);
+
+  return { 
+    events: await eventRepository.findAll({ populate: ["icon"] }) 
+  };
+}
+
+export default function Events() {
+  const { events } = useLoaderData<typeof loader>();
+
+  // events is properly typed
+}
+
+// We export the generated type from the loader
+export type EventsList = ReturnType<typeof useLoaderData<typeof loader>>['events'];
+```
+
+list.ts
+```ts
+import { EventsList } from './index';
+
+type EventsIndexTableProps = {
+  events: EventsList;
+}
+
+export function EventsIndexTable({ events }: EventsIndexTableProps) {
+  // typing is now carried over
+}
+```

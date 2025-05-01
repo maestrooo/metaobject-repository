@@ -10,13 +10,13 @@ export function deserialize<T>(metaobject: Metaobject): T {
       displayName: metaobject.displayName,
       createdAt: new Date(metaobject.createdAt),
       updatedAt: new Date(metaobject.updatedAt),
-      capabilities: metaobject.capabilities ?? [],
+      capabilities: metaobject.capabilities ?? {},
       thumbnailField: metaobject.thumbnailField?.thumbnail ?? null
     }
   }
 
   metaobject.fields?.forEach((field) => {
-    data[camel(field.key)] = field.jsonValue;
+    data[camel(field.key)] = field.jsonValue ?? (field.type.startsWith('list.') ? [] : '');
   });
 
   for (const key in metaobject) {

@@ -406,7 +406,8 @@ export type FromDefinitionWithSystemData<
   T extends D[number]["type"],
   P extends string = never
 > = FromDefinition<D, T, P> & {
-  system: {
+  readonly system: Readonly<{
+    type: string;
     id: string;
     handle: string;
     displayName: string;
@@ -414,5 +415,5 @@ export type FromDefinitionWithSystemData<
     createdAt: Date;
     updatedAt: Date;
     thumbnail: MetaobjectThumbnail | null;
-  }
+  }>
 }

@@ -9,6 +9,16 @@ import { UserErrorsException } from "./exception/user-errors-exception";
 import { deserialize, serializeFields } from "./transformer";
 
 /**
+ * Make a specific key in an object nullable
+ */
+type WithNullableKey<T, K extends keyof T> = {
+  [P in keyof T]:
+    P extends K
+      ? T[P] | null
+      : T[P]
+};
+
+/**
  * Object repository
  */
 export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number]["type"]> {
@@ -22,6 +32,23 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
   withClient(client: GraphQLClient<AdminOperations>): this {
     this.client = client;
     return this;
+  }
+
+  /**
+   * Generate a new empty object that contains all the fields of the definition, set to empty value
+   */
+  getEmptyObject(): WithNullableKey<FromDefinitionWithSystemData<D, T>, 'system'> {
+    let data: any = {
+      system: null
+    };
+
+    const definition = this.getDefinitionSchemaEntry(this.type);
+
+    definition.fields.forEach((field) => {
+      data[camel(field.key)] = field.type.startsWith('list.') ? [] : '';
+    });
+
+    return data;
   }
 
   /**
@@ -393,7 +420,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
     fragment
       .fields('id', 'type', 'handle', 'createdAt', 'updatedAt', 'displayName')
       .object('fields', (fields) => {
-        fields.fields('key', 'jsonValue')
+        fields.fields('key', 'jsonValue', 'type')
       });
 
     // We get the capabilities only if the definition contains some
@@ -529,7 +556,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
                 fragment
                   .fields('id', 'type', 'handle', 'createdAt', 'updatedAt', 'displayName')
                   .object('fields', (fields) => {
-                    fields.fields('key', 'jsonValue')
+                    fields.fields('key', 'jsonValue', 'type')
                   })
               });
 

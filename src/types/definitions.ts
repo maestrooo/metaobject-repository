@@ -288,10 +288,17 @@ type FileMapping<FT extends FileTypeVal> =
 
 /** 
  * If F["required"] is literally `true`, keep T as‐is, 
- * otherwise allow T | null. 
+ * otherwise allow T | null (only for non-list fields)
  */
-type MaybeNullable<F extends { required?: boolean }, T> =
-  F["required"] extends true ? T : T | null;
+type MaybeNullableNonList<
+  F extends { required?: boolean; type: string },
+  T
+> =
+  // If it’s a list field, leave it alone
+  F["type"] extends `list.${string}` ? T
+  // Otherwise, if required===true keep T, else T|null
+  : F["required"] extends true          ? T
+  : T | null;
 
 /**
  * --------------------------------------------------------------------------------------------
@@ -363,7 +370,7 @@ export type FromDefinition<
   P extends string = never
 > = {
   [F in DefinitionByType<D, T>["fields"][number] as CamelCase<F["key"]>]:
-    MaybeNullable<F, 
+    MaybeNullableNonList<F, 
       // a) LIST fields
       F["type"] extends `list.${infer U extends BaseFieldType}`
         ? (

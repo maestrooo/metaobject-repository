@@ -420,7 +420,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
     fragment
       .fields('id', 'type', 'handle', 'createdAt', 'updatedAt', 'displayName')
       .object('fields', (fields) => {
-        fields.fields('key', 'jsonValue')
+        fields.fields('key', 'jsonValue', 'type')
       });
 
     // We get the capabilities only if the definition contains some
@@ -556,7 +556,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
                 fragment
                   .fields('id', 'type', 'handle', 'createdAt', 'updatedAt', 'displayName')
                   .object('fields', (fields) => {
-                    fields.fields('key', 'jsonValue')
+                    fields.fields('key', 'jsonValue', 'type')
                   })
               });
 

@@ -16,7 +16,11 @@ export function deserialize<T>(metaobject: Metaobject): T {
   }
 
   metaobject.fields?.forEach((field) => {
-    data[camel(field.key)] = field.jsonValue;
+    if (field.type.startsWith('list.')) {
+      data[camel(field.key)] = field.jsonValue ?? [];
+    } else {
+      data[camel(field.key)] = field.jsonValue;
+    }
   });
 
   for (const key in metaobject) {

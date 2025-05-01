@@ -11,7 +11,7 @@ export function serializeFields(data: object): MetaobjectFieldInput[] {
   return Object.entries(toSnake(data)).map(([key, value]) => {
     return {
       key,
-      value: (value === null || value === undefined) ? '' : (typeof value === 'string' ? value : JSON.stringify(value))
+      value: (value === null || value === undefined || (Array.isArray(value) && value.length === 0)) ? '' : (typeof value === 'string' ? value : JSON.stringify(value))
     };
   });
 }

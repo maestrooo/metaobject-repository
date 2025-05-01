@@ -45,7 +45,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
     const definition = this.getDefinitionSchemaEntry(this.type);
 
     definition.fields.forEach((field) => {
-      data[camel(field.key)] = field.type.startsWith('list.') ? [] : '';
+      data[camel(field.key)] = null;
     });
 
     return data;
@@ -420,7 +420,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
     fragment
       .fields('id', 'type', 'handle', 'createdAt', 'updatedAt', 'displayName')
       .object('fields', (fields) => {
-        fields.fields('key', 'jsonValue', 'type')
+        fields.fields('key', 'jsonValue')
       });
 
     // We get the capabilities only if the definition contains some
@@ -556,7 +556,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
                 fragment
                   .fields('id', 'type', 'handle', 'createdAt', 'updatedAt', 'displayName')
                   .object('fields', (fields) => {
-                    fields.fields('key', 'jsonValue', 'type')
+                    fields.fields('key', 'jsonValue')
                   })
               });
 

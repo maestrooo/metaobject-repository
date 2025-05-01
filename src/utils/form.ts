@@ -59,8 +59,12 @@ export function createFormState(obj: any, keys?: string[]) {
     else {
       const val = obj[key];
 
-      // 1) array?
-      if (Array.isArray(val)) {
+      // 1) null or undefined?
+      if (val === null || val === undefined) {
+        result[key] = ''; // We treat those as empty strings to make it easier to use in forms
+      }
+      // 2) array? 
+      else if (Array.isArray(val)) {
         result[key] = val.map(item => {
           // array of { id }?
           if (item != null && typeof item === "object" && "id" in item) {
@@ -74,15 +78,15 @@ export function createFormState(obj: any, keys?: string[]) {
           return String(item);
         });
       }
-      // 2) single object with id?
+      // 3) single object with id?
       else if (val != null && typeof val === "object" && "id" in val) {
         result[key] = (val as any).id;
       }
-      // 3) primitive
+      // 4) primitive
       else if (["string", "number", "boolean"].includes(typeof val)) {
         result[key] = val;
       }
-      // 4) anything else → string
+      // 5) anything else → string
       else {
         result[key] = String(val);
       }

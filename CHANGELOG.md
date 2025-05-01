@@ -1,3 +1,7 @@
+## 0.3.2
+
+- Change the logic of how null values are treated to match Shopify structure, and improve the typing so that non required fields might resolve to null in the generated type.
+
 ## 0.3.1
 
 - Fix an issue during deserialization for an empty reference.

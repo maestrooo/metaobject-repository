@@ -291,10 +291,12 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
           });
       });
 
+    const { id, ...inputWithoutId } = input; 
+
     const variables = {
-      id: this.transformId(input.id),
+      id: this.transformId(id),
       metaobject: {
-        ...input,
+        ...inputWithoutId,
         fields: serializeFields(input.fields)
       }
     };
@@ -332,13 +334,15 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
           });
       });
 
+    const { handle, ...inputWithoutHandle } = input;
+
     const variables = {
       handle: {
-        handle: input.handle,
+        handle,
         type: this.type,
       },
       metaobject: {
-        ...input,
+        ...inputWithoutHandle,
         fields: serializeFields(input.fields)
       }
     };

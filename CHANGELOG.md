@@ -1,4 +1,4 @@
-## 0.3.5
+## 0.3.5/0.3.6
 
 - Fix a bug where the id was not properly converted to GID when using legacy ID in the `update` method.
 

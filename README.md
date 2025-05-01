@@ -666,8 +666,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 ### Creating empty object
 
 It is often needed, in loaders, to create an empty object that will be populated in a form. To ensure you get a typed object, you can use the
-utility method `getEmptyObject` defined in all repositories. This will create an object with all properties set to null. You can then use the
-`createFormState` utility method if you want to have a usable array for forms.
+utility method `getEmptyObject` defined in all repositories. This will create an object with all properties set to null for scalar fields, and
+empty array for list fields. You can then use the `createFormState` utility method if you want to have a usable array for forms.
 
 ```ts
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {

@@ -9,3 +9,4 @@ export type { FieldDefinition, DefinitionSchemaEntry, DefinitionSchema } from '.
 export type { OnPopulateFunc } from './types/metaobject-repository';
 
 export { createFormState } from './utils/form';
+export { extractFindParams } from './utils/params';

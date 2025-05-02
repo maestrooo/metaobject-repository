@@ -1,3 +1,7 @@
+## 0.4.0
+
+- Added a new `extractFindParams` utility function that can be used to automatically extract search params to be used with the `find` method.
+
 ## 0.3.5/0.3.6
 
 - Fix a bug where the id was not properly converted to GID when using legacy ID in the `update` method.

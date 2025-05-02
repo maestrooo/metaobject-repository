@@ -744,6 +744,25 @@ const formState = createFormState(myObject, ['id', 'title']);
 > If the object is not persisted yet (for instance if you call this method on an empty object created through `getEmptyObject`), then the `id` and
 `handle` will always be null.
 
+### Extracting query params
+
+When using the `find` method, you can use the `extractFindParams` by passing a `URLSearchParams` object to automatically build attributes:
+
+```ts
+import { extractFindParams } from 'metaobject-repository';
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+  let { searchParams } = new URL(request.url);
+
+  eventRepository.withClient(admin.graphql);
+
+  return { 
+    events: await eventRepository.findAll({ ...extractFindParams(searchParams), populate: ["icon"] }) 
+  };
+}
+```
+
 ### Typing loader data
 
 Let's say that you have a loader in a `index.ts` route, that returns a list of events, with some populated properties:

@@ -147,7 +147,9 @@ type BaseFieldType =
   "collection_reference" | "customer_reference" | "company_reference" | "file_reference" | "metaobject_reference" | "mixed_reference" | 
   "page_reference" | "product_reference" | "product_taxonomy_value_reference" | "variant_reference";
 
-type FieldType = BaseFieldType | `list.${BaseFieldType}`;
+type ListableFieldType = Exclude<BaseFieldType, 'boolean' | 'rich_text_field'>;
+
+type FieldType = BaseFieldType | `list.${ListableFieldType}`;
 
 type ListElement<T extends FieldType> = T extends `list.${infer U}` ? U : never;
 

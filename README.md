@@ -763,6 +763,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 }
 ```
 
+The library expects the query params to be called `first`, `last`, `before`, `after`, `query`, `reverse` and `sortKey`.
+
 ### Typing loader data
 
 Let's say that you have a loader in a `index.ts` route, that returns a list of events, with some populated properties:

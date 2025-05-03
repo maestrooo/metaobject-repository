@@ -1,3 +1,7 @@
+## 0.4.1
+
+- Improve the typing system on definition to ensure that `list.boolean` and `list.rich_text_field` are not accepted.
+
 ## 0.4.0
 
 - Added a new `extractFindParams` utility function that can be used to automatically extract search params to be used with the `find` method.

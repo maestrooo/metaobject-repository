@@ -5,8 +5,7 @@
  */
 
 import { FieldBuilder } from "raku-ql";
-import { CamelCase, CapabilityInputMap, DefaultMap, DefinitionByType, DefinitionSchema, FieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./definitions";
-import { MetaobjectRepository } from "~/metaobject-repository";
+import { CamelCase, CapabilityInputMap, DefaultMap, DefinitionByType, DefinitionSchema, FieldDefinition } from "./definitions";
 
 /**
  * --------------------------------------------------------------------------------------------

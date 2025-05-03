@@ -1,6 +1,6 @@
-## 0.4.1
+## 0.4.1/0.4.2
 
-- Improve the typing system on definition to ensure that `list.boolean` and `list.rich_text_field` are not accepted.
+- Improve the typing system on definition to ensure that `list.boolean`, `list.rich_text_field`, `list.money`, `list.id`, `list.json` and `list.multi_line_text_field` are not accepted.
 
 ## 0.4.0
 

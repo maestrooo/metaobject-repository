@@ -147,7 +147,7 @@ type BaseFieldType =
   "collection_reference" | "customer_reference" | "company_reference" | "file_reference" | "metaobject_reference" | "mixed_reference" | 
   "page_reference" | "product_reference" | "product_taxonomy_value_reference" | "variant_reference";
 
-type ListableFieldType = Exclude<BaseFieldType, 'boolean' | 'rich_text_field'>;
+type ListableFieldType = Exclude<BaseFieldType, 'boolean' | 'rich_text_field' | 'multi_line_text_field' | 'id' | 'money' | 'json'>;
 
 type FieldType = BaseFieldType | `list.${ListableFieldType}`;
 

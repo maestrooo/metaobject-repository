@@ -1,3 +1,8 @@
+## 0.5.0
+
+- JSON fields are now also converted to camelCase, to make the experience most consistent in JavaScript (and then converted back to snake_case when saved to Shopify).
+- Improved the typing to add support for JSON fields.
+
 ## 0.4.1/0.4.2
 
 - Improve the typing system on definition to ensure that `list.boolean`, `list.rich_text_field`, `list.money`, `list.id`, `list.json` and `list.multi_line_text_field` are not accepted.

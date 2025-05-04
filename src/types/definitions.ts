@@ -1,3 +1,4 @@
+import { JSONSchema, FromSchema } from "json-schema-to-ts";
 import { 
   MetaobjectCapabilitiesOnlineStore, MetaobjectCapabilitiesPublishable, MetaobjectCapabilitiesRenderable, MetaobjectCapabilitiesTranslatable, 
   MetaobjectCapabilityOnlineStoreInput, MetaobjectCapabilityPublishableInput, GenericFile, Image, Metaobject, MetaobjectAccessInput, 
@@ -234,6 +235,7 @@ export type DefaultMap = {
   url:                              string;
   volume:                           Volume;
   weight:                           Weight;
+  json:                             object;
   collection_reference:             string;
   customer_reference:               string;
   company_reference:                string;
@@ -264,6 +266,7 @@ export type PopulatedMap = {
   url:                              string;
   volume:                           Volume;
   weight:                           Weight;
+  json:                             object;
   collection_reference:             Pick<Collection, 'id' | 'handle' | 'title' | 'description' | 'hasProduct' | 'sortOrder' | 'updatedAt' | 'templateSuffix' | 'image'>;
   customer_reference:               Pick<Customer, 'id' | 'displayName' | 'amountSpent' | 'numberOfOrders' | 'email' | 'verifiedEmail' | 'phone' | 'createdAt' | 'updatedAt' | 'locale' | 'image'>;
   company_reference:                Pick<Company, 'id' | 'externalId' | 'name' | 'lifetimeDuration' | 'ordersCount' | 'totalSpent' | 'createdAt' | 'updatedAt'>,
@@ -323,6 +326,11 @@ export type CamelCase<S extends string> =
   : S extends `${infer Head}-${infer Tail}`     ? `${Lowercase<Head>}${Capitalize<CamelCase<Tail>>}`
   : Lowercase<S>;
 
+// Recursively camel case all keys
+export type CamelCaseKeys<T> = T extends object
+  ? { [K in keyof T as CamelCase<K & string>]: CamelCaseKeys<T[K]> }
+  : T;
+
 // Build union of all reference‐field keys in D[K]
 type RefFieldKeys<D extends DefinitionSchema, T extends D[number]["type"]> =
   // pick the one entry whose `type` is T
@@ -373,8 +381,14 @@ export type FromDefinition<
 > = {
   [F in DefinitionByType<D, T>["fields"][number] as CamelCase<F["key"]>]:
     MaybeNullableNonList<F, 
+      F["type"] extends "json"
+        ? (
+          F extends { validations: { schema: infer S } }
+            ? CamelCaseKeys<FromSchema<S & JSONSchema>>
+            : object
+        )
       // a) LIST fields
-      F["type"] extends `list.${infer U extends BaseFieldType}`
+      : F["type"] extends `list.${infer U extends BaseFieldType}`
         ? (
             // mixed_reference → array of union
             U extends "mixed_reference"

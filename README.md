@@ -96,6 +96,65 @@ with. Make sure to pass the type to have all the magic happen:
 export const eventRepository = new MetaobjectRepository(definitions, "$app:event");
 ```
 
+#### Get typing for JSON fields
+
+If you have a field of type JSON, then you won't get typing information automatically:
+
+```ts
+// Some field definition
+fields: [
+  { name: "Address", key: "address", type: "json" }
+]
+
+// ...
+
+const event = await eventRepository.findByHandle('handle');
+event.address.???; // This won't be autocompleted
+```
+
+To make this work, you can pass an JSON schema as the validations (this is also a good practice, as it helps ensuring data consistency,
+as Shopify won't save metaobjects that do not comply with the schema):
+
+```ts
+// Some field definition
+fields: [
+  { 
+    name: "Address", 
+    key: "address", 
+    type: "json",
+    validations: {
+      schema: {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Address",
+        "type": "object",
+        "properties": {
+          "address1": {
+            "type": "string",
+            "description": "Primary street address"
+          },
+          "address2": {
+            "type": "string",
+            "description": "Secondary address information (e.g. apartment, suite)"
+          },
+          "zip_code": {
+            "type": "string",
+            "description": "Postal or ZIP code"
+          }
+        },
+        "required": ["address1"],
+        "additionalProperties": false
+      }
+    }
+  }
+];
+```
+
+You will now get auto-completion. For making it easier to use, all the keys are automatically converted to camelCase in the schema,
+so you get consistent auto-completion.
+
+> In the schema, make sure to use the underscore_separated naming, as this is the schema saved as part of the definition (the library)
+won't convert those to snake_case.
+
 ### Creating the schema
 
 When your app is installed, it is needed to create the definitions for all metaobjects. To do that, import the `definitionManager`

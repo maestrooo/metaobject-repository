@@ -1,4 +1,4 @@
-import { camel } from "snake-camel";
+import { toCamel } from "snake-camel";
 import { Metaobject } from "~/types/admin.types";
 
 export function deserialize<T>(metaobject: Metaobject): T {
@@ -17,9 +17,9 @@ export function deserialize<T>(metaobject: Metaobject): T {
 
   metaobject.fields?.forEach((field) => {
     if (field.type.startsWith('list.')) {
-      data[camel(field.key)] = field.jsonValue ?? [];
+      data[field.key] = field.jsonValue ?? [];
     } else {
-      data[camel(field.key)] = field.jsonValue;
+      data[field.key] = field.jsonValue;
     }
   });
 
@@ -49,5 +49,5 @@ export function deserialize<T>(metaobject: Metaobject): T {
     }
   }
 
-  return data as any;
+  return toCamel(data) as any;
 }

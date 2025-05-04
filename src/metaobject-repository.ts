@@ -21,7 +21,10 @@ type WithNullableKey<T, K extends keyof T> = {
 /**
  * Object repository
  */
-export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number]["type"]> {
+export class MetaobjectRepository<
+  D extends DefinitionSchema, 
+  T extends D[number]["type"]
+> {
   private client!: GraphQLClient<AdminOperations>;
   
   constructor(private readonly defs: D, public readonly type: T) {}

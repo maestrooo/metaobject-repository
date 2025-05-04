@@ -1,3 +1,7 @@
+## 0.5.1
+
+- Ensure the typing for JSON also works for arrays.
+
 ## 0.5.0
 
 - JSON fields are now also converted to camelCase, to make the experience most consistent in JavaScript (and then converted back to snake_case when saved to Shopify).

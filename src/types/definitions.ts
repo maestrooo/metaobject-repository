@@ -327,8 +327,16 @@ export type CamelCase<S extends string> =
   : Lowercase<S>;
 
 // Recursively camel case all keys
-export type CamelCaseKeys<T> = T extends object
-  ? { [K in keyof T as CamelCase<K & string>]: CamelCaseKeys<T[K]> }
+export type CamelCaseKeys<T> =
+  // if it’s an array or tuple, recurse on its element type
+  T extends readonly (infer U)[]
+    ? Array<CamelCaseKeys<U>>
+
+  // if it’s a plain object, map over its props
+  : T extends object
+    ? { [K in keyof T as CamelCase<Extract<K, string>>]: CamelCaseKeys<T[K]> }
+
+  // otherwise leave it alone
   : T;
 
 // Build union of all reference‐field keys in D[K]
@@ -383,8 +391,8 @@ export type FromDefinition<
     MaybeNullableNonList<F, 
       F["type"] extends "json"
         ? (
-          F extends { validations: { schema: infer S } }
-            ? CamelCaseKeys<FromSchema<S & JSONSchema>>
+          F extends { validations: { schema: infer S extends JSONSchema } }
+            ? CamelCaseKeys<FromSchema<S>>
             : object
         )
       // a) LIST fields

@@ -112,6 +112,12 @@ const event = await eventRepository.findByHandle('handle');
 event.address.???; // This won't be autocompleted
 ```
 
+If you need to get type, first install the library json-schema-to-ts:
+
+```
+npm install --save-dev json-schema-to-ts
+```
+
 To make this work, you can pass an JSON schema as the validations (this is also a good practice, as it helps ensuring data consistency,
 as Shopify won't save metaobjects that do not comply with the schema):
 

@@ -193,7 +193,7 @@ The `createFromSchema` will automatically:
 > If you have a lot of definitions with complex dependencies, this method can take time. It is recommended that you save somewhere in your
 app when you have fully initialized the definitions, to skip the process.
 
-### Updating a schema
+### Updating a definition
 
 It might be needed to alter a definition beyond the fixed schema. To do that, the `definitionManager` has a nice `updateDefinition`, which
 accepts a type (so you don't have to get the ID yourself) and a compliant [`MetaobjectDefinitionUpdateInput`](https://shopify.dev/docs/api/admin-graphql/unstable/input-objects/MetaobjectDefinitionUpdateInput) payload:
@@ -225,6 +225,59 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return null;
 };
 ```
+
+### Creating a definition
+
+The preferred method to create definitions is by using the `createFromSchema`. This method automatically takes care of creating all your
+definitions, with their dependencies. However, if you need to create a custom definition, that is not baked by a schema, you can use the
+`createDefinition` method:
+
+```ts
+import { definitionManager } from "metaobject-repository";
+import { definitions } from "your-definitions";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+
+  definitionManager.withClient(admin.graphql); // <== Don't forget
+
+  await definitionManager.createDefinition({
+    definition: {
+      type: '$app:event',
+      name: 'Big events',
+      fieldDefinitions: [
+        {
+          key: 'country',
+          type: 'single_line_text_field'
+        }
+      ]
+    }
+  })
+
+  return null;
+};
+```
+
+### Retrieving a definition
+
+You can get information about a definition by using the `getDefinitionByType`:
+
+```ts
+import { definitionManager } from "metaobject-repository";
+import { definitions } from "your-definitions";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+
+  definitionManager.withClient(admin.graphql); // <== Don't forget
+
+  const definition = await definitionManager.getDefinitionByType('$app:event');
+
+  return null;
+};
+```
+
+> The `createdByApp`, `createdByStaff`, `metaobjects` and `standardTemplate` are not retrieved, as they are not very useful for the use case of this library.
 
 ## Interacting with the object manager
 
@@ -908,3 +961,11 @@ export function EventsIndexTable({ events }: EventsIndexTableProps) {
   // typing is now carried over
 }
 ```
+
+
+### Roadmap
+
+* Adding a translation repository to make it easier to translate metaobjects.
+* Adding a `bulkUpsert` method to upsert a high number of objects using a long standing job.
+* Add an `export` method to the repository to export up to 250 metaobjects.
+* Add a `bulkExport` method to export any number of metaobjects, using the bulk API.

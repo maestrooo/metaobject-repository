@@ -1,3 +1,8 @@
+## 0.6.0
+
+- The `createDefinition` method is now public on the definitions manager, to allow developers to create custom definition that are not baked by a schema.
+- The `getDefinitionByType` method has been added to the definitions manager.
+
 ## 0.5.1
 
 - Ensure the typing for JSON also works for arrays.

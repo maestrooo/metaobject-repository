@@ -2,7 +2,7 @@ import { GraphQLClient } from "node_modules/@shopify/shopify-app-remix/dist/ts/s
 import { DefinitionSchema, FieldDefinition } from "./types/definitions";
 import { AdminOperations } from "@shopify/admin-api-client";
 import { snake } from "snake-camel";
-import { MetaobjectAccessInput, MetaobjectDefinitionCreateInput, MetaobjectDefinitionUpdateInput } from "~/types/admin.types";
+import { MetaobjectAccessInput, MetaobjectDefinition, MetaobjectDefinitionCreateInput, MetaobjectDefinitionUpdateInput } from "~/types/admin.types";
 
 /**
  * Manage the schema definitions
@@ -17,6 +17,73 @@ export class DefinitionManager {
   withClient(client: GraphQLClient<AdminOperations>): this {
     this.client = client;
     return this;
+  }
+
+  /**
+   * Get the definition by type. If the definition doesn't exist, returns null
+   */
+  async getDefinitionByType(type: string): Promise<Omit<MetaobjectDefinition, 'createdByApp' | 'createdByStaff' | 'metaobjects' | 'standardTemplate'> | null> {
+    const response = await this.client(
+      `#graphql
+      query GetMetaobjectDefinitionByType($type: String!) {
+        metaobjectDefinitionByType(type: $type) {
+          id
+          type
+          name
+          description
+          displayNameKey
+          hasThumbnailField
+          metaobjectsCount
+          access {
+            admin
+            storefront
+          }
+          capabilities {
+            onlineStore {
+              data {
+                urlHandle
+                canCreateRedirects
+              }
+              enabled
+            }
+            publishable {
+              enabled
+            }
+            translatable {
+              enabled
+            }
+            renderable {
+              data {
+                metaTitleKey
+                metaDescriptionKey
+              }
+              enabled
+            }
+          }
+          fieldDefinitions {
+            description
+            key
+            name
+            required
+            type {
+              category
+              name
+            }
+            validations {
+              name
+              type
+              value
+            }
+          }
+        }
+      }`, {
+        variables: { type }
+      }
+    );
+
+    const responseJson = await response.json();
+
+    return responseJson.data.metaobjectDefinitionByType;
   }
 
   /**
@@ -132,6 +199,45 @@ export class DefinitionManager {
         })
       );
     }
+  }
+
+  /**
+   * Create a new definition and return the ID of the generated definition. Usually, this method should not be used directly,
+   * as it won't create automatically the dependencies. Instead, use `createFromSchema` to automatically create the definitions
+   * with all their dependencies
+   */
+  async createDefinition(definition: MetaobjectDefinitionCreateInput): Promise<string> {
+    const response = await this.client(
+      `#graphql
+      mutation CreateMetaobjectDefinition($definition: MetaobjectDefinitionCreateInput!) {
+        metaobjectDefinitionCreate(definition: $definition) {
+          metaobjectDefinition {
+            id
+            name
+            type
+          }
+
+          userErrors {
+            field
+            message
+            code
+          }
+        }
+      }`, {
+        variables: { definition }
+      }
+    );
+
+    const responseJson = await response.json();
+
+    const { metaobjectDefinition, userErrors } = responseJson.data.metaobjectDefinitionCreate;
+
+    if (userErrors.length > 0) {
+      console.warn(userErrors);
+      throw new Error(`Cannot create the metaobject definition. Reason: ${userErrors[0].message}`);
+    }
+
+    return metaobjectDefinition.id;
   }
 
   /**
@@ -275,44 +381,6 @@ export class DefinitionManager {
     }
 
     return id;
-  }
-
-  /**
-   * Create a new definition and return the ID of the generated definition. This method is used internally to create
-   * the definition and can't be used directly.
-   */
-  private async createDefinition(definition: MetaobjectDefinitionCreateInput): Promise<string> {
-    const response = await this.client(
-      `#graphql
-      mutation CreateMetaobjectDefinition($definition: MetaobjectDefinitionCreateInput!) {
-        metaobjectDefinitionCreate(definition: $definition) {
-          metaobjectDefinition {
-            id
-            name
-            type
-          }
-
-          userErrors {
-            field
-            message
-            code
-          }
-        }
-      }`, {
-        variables: { definition }
-      }
-    );
-
-    const responseJson = await response.json();
-
-    const { metaobjectDefinition, userErrors } = responseJson.data.metaobjectDefinitionCreate;
-
-    if (userErrors.length > 0) {
-      console.warn(userErrors);
-      throw new Error(`Cannot create the metaobject definition. Reason: ${userErrors[0].message}`);
-    }
-
-    return metaobjectDefinition.id;
   }
 }
 

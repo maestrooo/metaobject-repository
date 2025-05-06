@@ -1,4 +1,8 @@
-## 0,8.4
+## 0.8.5
+
+- Typing for JSON fields with a validation schema is now honored for create, update, upsert and getEmptyObject.
+
+## 0.8.4
 
 - Further improve typing of `getEmptyObject`.
 

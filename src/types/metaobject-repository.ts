@@ -4,8 +4,9 @@
  * schema to auto-complete capabilities.
  */
 
+import { JSONSchema, FromSchema } from "json-schema-to-ts";
 import { FieldBuilder } from "raku-ql";
-import { CamelCase, DefaultMap, DefinitionByType, DefinitionSchema, FieldDefinition } from "./definitions";
+import { CamelCase, CamelCaseKeys, DefaultMap, DefinitionByType, DefinitionSchema, FieldDefinition } from "./definitions";
 import { MetaobjectCapabilityDataOnlineStoreInput, MetaobjectCapabilityDataPublishableInput, MetaobjectStatus } from "./admin.types";
 
 /**
@@ -25,6 +26,16 @@ type DefinitionCapabilityKeys<D extends DefinitionSchema, T extends D[number]["t
 
 type FieldDef<D extends DefinitionSchema, T extends D[number]["type"]> = DefinitionByType<D, T>["fields"][number];
 
+type FieldDefByKey<D extends DefinitionSchema, T extends D[number]["type"], P extends string> = Extract<
+  DefinitionByType<D, T>["fields"][number],
+  { key: P }
+>;
+
+type JsonFieldInput<D extends DefinitionSchema, T extends D[number]["type"], P extends string> =
+  FieldDefByKey<D, T, P> extends { validations: { schema: infer S extends JSONSchema } }
+    ? CamelCaseKeys<FromSchema<S>>
+    : object;
+
 type RequiredKeys<D extends DefinitionSchema, T extends D[number]["type"]> =
   Extract<FieldDef<D, T>, { required: true }>["key"];
 
@@ -37,19 +48,23 @@ type FieldTypeOf<D extends DefinitionSchema, T extends D[number]["type"], P exte
     { key: P }
   >["type"];
 
-  type FieldsInput<D extends DefinitionSchema, T extends D[number]["type"]> = {
-    // required fields
-    [P in RequiredKeys<D, T> as CamelCase<P>]:
-      FieldTypeOf<D, T, P> extends `list.${infer U}`
-        ? Array<DefaultMap[U & keyof DefaultMap]>        // list → array
-        : DefaultMap[FieldTypeOf<D, T, P> & keyof DefaultMap];  // scalar
-  } & {
-    // optional fields
-    [P in OptionalKeys<D, T> as CamelCase<P>]?: 
-      FieldTypeOf<D, T, P> extends `list.${infer U}`
-        ? Array<DefaultMap[U & keyof DefaultMap]>
-        : DefaultMap[FieldTypeOf<D, T, P> & keyof DefaultMap];
-  };
+type FieldsInput<D extends DefinitionSchema, T extends D[number]["type"]> = {
+  // required fields
+  [P in RequiredKeys<D, T> as CamelCase<P>]:
+    FieldTypeOf<D, T, P> extends "json"
+      ? JsonFieldInput<D, T, P>
+    : FieldTypeOf<D, T, P> extends `list.${infer U}`
+      ? Array<DefaultMap[U & keyof DefaultMap]>        // list → array
+      : DefaultMap[FieldTypeOf<D, T, P> & keyof DefaultMap];  // scalar
+} & {
+  // optional fields
+  [P in OptionalKeys<D, T> as CamelCase<P>]?: 
+    FieldTypeOf<D, T, P> extends "json"
+      ? JsonFieldInput<D, T, P>
+    : FieldTypeOf<D, T, P> extends `list.${infer U}`
+      ? Array<DefaultMap[U & keyof DefaultMap]>
+      : DefaultMap[FieldTypeOf<D, T, P> & keyof DefaultMap];
+};
 
 // Build capabilities‐input for only those defined
 type CapabilitiesInput<D extends DefinitionSchema, T extends D[number]["type"]> = Partial<{
@@ -82,10 +97,19 @@ export type UpsertInput<D extends DefinitionSchema, T extends D[number]["type"]>
  * --------------------------------------------------------------------------------------------
  */
 
-export type EmptyObjectOptions = {
+export type EmptyObject<T extends { system: object }> = Omit<T, "system"> & {
+  system: {
+    [K in keyof T["system"]]:
+      K extends "type" | "capabilities"
+        ? T["system"][K]
+        : T["system"][K] | null;
+  };
+};
+
+export type EmptyObjectOptions<D extends DefinitionSchema, T extends D[number]["type"]> = {
   defaultPublishableStatus?: MetaobjectStatus;
-  defaultValues: Record<string, any>;
-}
+  defaultValues?: Partial<FieldsInput<D, T>>;
+};
 
 export type OnPopulateFunc = (fieldDefinition: FieldDefinition, fieldBuilder: FieldBuilder) => void;
 

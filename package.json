@@ -1,6 +1,6 @@
 {
   "name": "metaobject-repository",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "A simple repository to manipulate Shopify metaobjects and metafields.",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",

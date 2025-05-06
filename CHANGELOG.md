@@ -1,3 +1,8 @@
+## 0.8.3
+
+- The `getEmptyObject` now has an optional `defaultValues` option.
+- The typing system has been improved for the `createFormState`. Now, 
+
 ## 0.8.1/0.8.2
 
 - Make the default publishable of new metaobjects as active.

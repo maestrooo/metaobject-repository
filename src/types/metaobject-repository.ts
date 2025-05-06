@@ -6,7 +6,7 @@
 
 import { FieldBuilder } from "raku-ql";
 import { CamelCase, DefaultMap, DefinitionByType, DefinitionSchema, FieldDefinition } from "./definitions";
-import { MetaobjectCapabilityDataOnlineStoreInput, MetaobjectCapabilityDataPublishableInput } from "./admin.types";
+import { MetaobjectCapabilityDataOnlineStoreInput, MetaobjectCapabilityDataPublishableInput, MetaobjectStatus } from "./admin.types";
 
 /**
  * --------------------------------------------------------------------------------------------
@@ -78,9 +78,14 @@ export type UpsertInput<D extends DefinitionSchema, T extends D[number]["type"]>
 
 /**
  * --------------------------------------------------------------------------------------------
- * Types for pagination and find options
+ * Types for pagination, find options and empty options
  * --------------------------------------------------------------------------------------------
  */
+
+export type EmptyObjectOptions = {
+  defaultPublishableStatus?: MetaobjectStatus;
+  defaultValues: Record<string, any>;
+}
 
 export type OnPopulateFunc = (fieldDefinition: FieldDefinition, fieldBuilder: FieldBuilder) => void;
 

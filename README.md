@@ -802,9 +802,21 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 }
 ```
 
-When creating an empty object, the `system` will have all its properties set to null, as it has not yet been saved to Shopify. This can be used to differentiate an object that has been persisted yet with an object that has not.
+When creating an empty object, the `system` will have all its properties set to null (except the `type` and `capabilities`, which are set to the metaobject type and the default capabilities, respectively), as it has not yet been saved to Shopify. This can be used to differentiate an object that has been persisted yet with an object that has not.
 
-You can optionally pass the `defaultPublishableStatus` setting for publishable metaobject to set the default status. By default, metaobject with a publishable capability are set to `ACTIVE`.
+The `getEmptyObject` supports two options:
+
+- `defaultPublishableStatus`: for metaobjects with the publishable capability, this allows to set a default status. If none is passed, the `ACTIVE` value is set.
+- `defaultValues`: set a default value for a given field. This is useful for JSON fields, to set up a custom state.
+
+```ts
+event = eventRepository.getEmptyObject({
+  defaultPublishableStatus: MetaobjectStatus.Draft,
+  defaultValues: {
+    address: { street1: '', street2: '', city: '' }
+  }
+});
+```
 
 > If you are using the `populate` param on the find* methods, then the type won't match, for now I don't know what would be the best solution to
 solve this issue.

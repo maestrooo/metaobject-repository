@@ -5,9 +5,15 @@ type SpecialKey = "id" | "handle" | "capabilities";
 type AllowedKeys<T> = Exclude<keyof T, "system"> | SpecialKey;
 
 type ExtractFormValue<V> =
-  V extends Array<infer U>      ? Array<ExtractFormValue<U>> :
-  V extends string|number|boolean ? V :
-  string;
+  V extends readonly (infer U)[]
+    ? Array<ExtractFormValue<U>>
+  : V extends string | number | boolean
+    ? V
+  : V extends { id: any }
+    ? string
+  : V extends object
+    ? V
+  : unknown;
 
 type FormState<
   T extends { system?: { id?: any; handle?: any, capabilities?: any } | null },
@@ -84,7 +90,7 @@ export function createFormState(obj: any, keys?: string[]) {
         });
       }
       // 3) single object with id?
-      else if (val != null && typeof val === "object" && "id" in val) {
+      else if (val != null && typeof val === "object") {
         if ("id" in val && "__typename" in val) {
           result[key] = (val as any).id;
         } else {

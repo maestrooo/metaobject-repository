@@ -4,14 +4,14 @@ import { FieldBuilder, QueryBuilder } from "raku-ql";
 import { camel } from "snake-camel";
 import { Collection, Company, Customer, GenericFile, Job, MediaImage, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectStatus, MetaobjectUpdatePayload, MetaobjectUpsertPayload, Page, PageInfo, Product, ProductVariant, TaxonomyValue, Video } from "~/types/admin.types";
 import { DefinitionSchema, DefinitionSchemaEntry, FieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./types/definitions";
-import { CreateInput, FindOptions, OnPopulateFunc, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "./types/metaobject-repository";
+import { CreateInput, FindOptions, EmptyObjectOptions, OnPopulateFunc, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "./types/metaobject-repository";
 import { UserErrorsException } from "./exception/user-errors-exception";
 import { deserialize, serializeFields } from "./transformer";
 
 type EmptyObject<T extends { system: object }> =
-  // 2) Remove the original `system`
+  // 1) Remove the original `system`
   Omit<T, "system"> & {
-    // 3) Re-add `system` with all keys except `capabilities` made nullable
+    // 2) Re-add `system` with all keys except `capabilities` made nullable
     system: {
       [K in keyof T["system"]]:
         K extends "type" | "capabilities"
@@ -42,7 +42,8 @@ export class MetaobjectRepository<
   /**
    * Generate a new empty object that contains all the fields of the definition, set to empty value
    */
-  getEmptyObject(opts?: { defaultPublishableStatus: MetaobjectStatus }): EmptyObject<FromDefinitionWithSystemData<D, T>> {
+  
+  getEmptyObject(opts?: EmptyObjectOptions): EmptyObject<FromDefinitionWithSystemData<D, T>> {
     const definition = this.getDefinitionSchemaEntry(this.type);
 
     let data: any = {
@@ -71,7 +72,13 @@ export class MetaobjectRepository<
     })
 
     definition.fields.forEach((field) => {
-      data[camel(field.key)] = field.type.startsWith('list.') ? [] : null;
+      const key = camel(field.key);
+
+      if (opts?.defaultValues && key in opts.defaultValues) {
+        data[key] = opts.defaultValues?.[key];
+      } else {
+        data[key] = field.type.startsWith('list.') ? [] : null;
+      }
     });
 
     return data;

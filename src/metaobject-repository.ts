@@ -51,6 +51,7 @@ export class MetaobjectRepository<
         handle: null,
         type: this.type,
         displayName: '',
+        capabilities: {},
         createdAt: null,
         updatedAt: null,
         thumbnail: null

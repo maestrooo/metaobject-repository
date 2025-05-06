@@ -1,3 +1,9 @@
+## 0.8.0
+
+- [BC] The `getEmptyObject` will now have a `system` with all the possible keys set to null.
+- The `getEmptyObject` now accepts an optional `defaultPublishableStatus`.
+- Ensure that JSON fields are returned as an object when using the `createFormState` method, and are not serialized as a string.
+
 ## 0.7.0
 
 - [BC] The `createFormState` method has been changed: id and handle now returns an empty string instead of null, to ensure it aligns with other properties, and make it easier to use for forms.

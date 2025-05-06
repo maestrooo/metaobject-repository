@@ -802,8 +802,9 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 }
 ```
 
-When creating an empty object, the `system` will be set to null, as it has not yet been saved to Shopify. This can be used to differentiate an
-object that has been persisted yet with an object that has not.
+When creating an empty object, the `system` will have all its properties set to null, as it has not yet been saved to Shopify. This can be used to differentiate an object that has been persisted yet with an object that has not.
+
+You can optionally pass the `defaultPublishableStatus` setting for publishable metaobject to set the default status.
 
 > If you are using the `populate` param on the find* methods, then the type won't match, for now I don't know what would be the best solution to
 solve this issue.

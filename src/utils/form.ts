@@ -85,7 +85,11 @@ export function createFormState(obj: any, keys?: string[]) {
       }
       // 3) single object with id?
       else if (val != null && typeof val === "object" && "id" in val) {
-        result[key] = (val as any).id;
+        if ("id" in val && "__typename" in val) {
+          result[key] = (val as any).id;
+        } else {
+          result[key] = val; // Otherwise we return the object (this will be the case for JSON fields)
+        }
       }
       // 4) primitive
       else if (["string", "number", "boolean"].includes(typeof val)) {

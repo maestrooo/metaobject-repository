@@ -1,3 +1,7 @@
+## 0,8.4
+
+- Further improve typing of `getEmptyObject`.
+
 ## 0.8.3
 
 - The `getEmptyObject` now has an optional `defaultValues` option.

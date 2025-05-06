@@ -12,8 +12,8 @@ type ExtractFormValue<V> =
   : V extends { id: any }
     ? string
   : V extends object
-    ? V
-  : unknown;
+    ? { [K in keyof V]-?: ExtractFormValue<V[K]> }
+  : string;
 
 type FormState<
   T extends { system?: { id?: any; handle?: any, capabilities?: any } | null },

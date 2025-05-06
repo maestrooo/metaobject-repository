@@ -1,3 +1,7 @@
+## 0.8.1/0.8.2
+
+- Make the default publishable of new metaobjects as active.
+
 ## 0.8.0
 
 - [BC] The `getEmptyObject` will now have a `system` with all the possible keys set to null.

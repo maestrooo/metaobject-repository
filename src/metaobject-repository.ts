@@ -61,7 +61,7 @@ export class MetaobjectRepository<
     Object.keys(definition.capabilities || {}).forEach(capability => {
       if (capability === 'publishable') {
         data.system.capabilities.publishable = {
-          status: opts?.defaultPublishableStatus || 'draft'
+          status: opts?.defaultPublishableStatus || 'ACTIVE'
         }
       } else if (capability === 'onlineStore') {
         data.system.capabilities.onlineStore = {

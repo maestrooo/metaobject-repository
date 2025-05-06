@@ -1,8 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
+
 // 1) (Re-use your existing helper types…)
-type SpecialKey = "id" | "handle";
-type AllowedKey<T> = Exclude<keyof T, "system"> | SpecialKey;
-type AllAllowedKeys<T> = Exclude<keyof T, "system"> | SpecialKey;
+type SpecialKey = "id" | "handle" | "capabilities";
+type AllowedKeys<T> = Exclude<keyof T, "system"> | SpecialKey;
 
 type ExtractFormValue<V> =
   V extends Array<infer U>      ? Array<ExtractFormValue<U>> :
@@ -10,13 +10,14 @@ type ExtractFormValue<V> =
   string;
 
 type FormState<
-  T extends { system?: { id?: any; handle?: any } | null },
-  K extends readonly AllowedKey<T>[]
+  T extends { system?: { id?: any; handle?: any, capabilities?: any } | null },
+  K extends readonly AllowedKeys<T>[]
 > = {
   [P in K[number]]:
     P extends keyof T   ? ExtractFormValue<T[P]> :
     P extends "id"      ? string | null :
     P extends "handle"  ? string | null :
+    P extends "capabilities" ? (T extends { system?: { capabilities: infer C } } ? C : null) :
     never;
 };
 
@@ -26,11 +27,11 @@ type FormState<
 // ─────────────────────────────────────────────────────────────────────────────
 export function createFormState<
   T extends { system?: { id?: any; handle?: any } | null }
->(obj: T): FormState<T, AllAllowedKeys<T>[]>;
+>(obj: T): FormState<T, AllowedKeys<T>[]>;
 
 export function createFormState<
   T extends { system?: { id?: any; handle?: any } | null },
-  const K extends readonly AllowedKey<T>[]
+  const K extends readonly AllowedKeys<T>[]
 >(obj: T, keys: K): FormState<T, K>;
 
 
@@ -45,18 +46,22 @@ export function createFormState(obj: any, keys?: string[]) {
           ...Object.keys(obj).filter((k) => k !== "system"),
           "id",
           "handle",
+          "capabilities"
         ];
 
   const result: any = {};
 
   for (const key of actualKeys) {
     if (key === "id") {
-      result[key] = obj.system?.id ?? null;
-    }
-    else if (key === "handle") {
-      result[key] = obj.system?.handle ?? null;
-    }
-    else {
+      result[key] = obj.system?.id ?? '';
+    } else if (key === "handle") {
+      result[key] = obj.system?.handle ?? '';
+    } else if (key === "capabilities") {
+      result[key] = obj.system?.capabilities ?? {
+        onlineStore: { templateSuffix: '' },
+        publishable: { enabled: 'ACTIVE' }
+      };
+    } else {
       const val = obj[key];
 
       // 1) null or undefined?

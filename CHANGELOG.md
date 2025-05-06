@@ -1,3 +1,8 @@
+## 0.7.0
+
+- [BC] The `createFormState` method has been changed: id and handle now returns an empty string instead of null, to ensure it aligns with other properties, and make it easier to use for forms.
+- Typing has been improved for capabilities. The `system.capabilities` in the returned objects will now match the definition. For instance, if a definition does not contain the `publishable` capability, it won't appear in the metaobject generated type anymore.
+
 ## 0.6.0
 
 - The `createDefinition` method is now public on the definitions manager, to allow developers to create custom definition that are not baked by a schema.

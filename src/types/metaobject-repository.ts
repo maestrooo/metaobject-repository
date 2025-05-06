@@ -5,7 +5,8 @@
  */
 
 import { FieldBuilder } from "raku-ql";
-import { CamelCase, CapabilityInputMap, DefaultMap, DefinitionByType, DefinitionSchema, FieldDefinition } from "./definitions";
+import { CamelCase, DefaultMap, DefinitionByType, DefinitionSchema, FieldDefinition } from "./definitions";
+import { MetaobjectCapabilityDataOnlineStoreInput, MetaobjectCapabilityDataPublishableInput } from "./admin.types";
 
 /**
  * --------------------------------------------------------------------------------------------
@@ -13,7 +14,13 @@ import { CamelCase, CapabilityInputMap, DefaultMap, DefinitionByType, Definition
  * --------------------------------------------------------------------------------------------
  */
 
-type DefCapabilities<D extends DefinitionSchema, T extends D[number]["type"]> =
+// Create‐time input for each capability
+type MetaobjectDefinitionCapabilityInputMap = {
+  onlineStore: MetaobjectCapabilityDataOnlineStoreInput;
+  publishable: MetaobjectCapabilityDataPublishableInput;
+}
+
+type DefinitionCapabilityKeys<D extends DefinitionSchema, T extends D[number]["type"]> =
   DefinitionByType<D, T> extends { capabilities: infer C } ? keyof C : never;
 
 type FieldDef<D extends DefinitionSchema, T extends D[number]["type"]> = DefinitionByType<D, T>["fields"][number];
@@ -45,8 +52,9 @@ type FieldTypeOf<D extends DefinitionSchema, T extends D[number]["type"], P exte
   };
 
 // Build capabilities‐input for only those defined
-type CapabilitiesInput<D extends DefinitionSchema, T extends D[number]["type"]> = 
-  Partial<{[C in DefCapabilities<D, T>]: CapabilityInputMap[C]}>;
+type CapabilitiesInput<D extends DefinitionSchema, T extends D[number]["type"]> = Partial<{
+  [C in DefinitionCapabilityKeys<D, T> & keyof MetaobjectDefinitionCapabilityInputMap]: MetaobjectDefinitionCapabilityInputMap[C];
+}>
 
 export type CreateInput<D extends DefinitionSchema, T extends D[number]["type"]> = {
   handle?: string;

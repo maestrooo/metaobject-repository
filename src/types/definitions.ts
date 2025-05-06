@@ -1,9 +1,8 @@
 import { JSONSchema, FromSchema } from "json-schema-to-ts";
 import { 
   MetaobjectCapabilitiesOnlineStore, MetaobjectCapabilitiesPublishable, MetaobjectCapabilitiesRenderable, MetaobjectCapabilitiesTranslatable, 
-  MetaobjectCapabilityOnlineStoreInput, MetaobjectCapabilityPublishableInput, GenericFile, Image, Metaobject, MetaobjectAccessInput, 
-  Product, Video, Collection, Customer, Page, ProductVariant, TaxonomyValue, MetaobjectCapabilityData, MetaobjectThumbnail,
-  Company
+  GenericFile, Image, Metaobject, MetaobjectAccessInput, Product, Video, Collection, Customer, Page, ProductVariant, TaxonomyValue, MetaobjectThumbnail,
+  Company, MetaobjectCapabilityDataOnlineStore, MetaobjectCapabilityDataPublishable
 } from "~/types/admin.types";
 
 /**
@@ -122,18 +121,40 @@ type FieldTypeWithValidation = keyof ValidationConfigMap;
  */
 
 // Definition‐level capability shapes
-type CapabilityConfigMap = {
+type DefinitionCapabilityConfigMap = {
   onlineStore: MetaobjectCapabilitiesOnlineStore;
   renderable: MetaobjectCapabilitiesRenderable;
   translatable: MetaobjectCapabilitiesTranslatable;
   publishable: MetaobjectCapabilitiesPublishable;
 }
 
-// Create‐time input for each capability
-export type CapabilityInputMap = {
-  onlineStore: MetaobjectCapabilityOnlineStoreInput;
-  publishable: MetaobjectCapabilityPublishableInput;
-}
+// Infer the capabilities from the definition
+export type DefinitionCapabilities<D extends DefinitionSchema, T extends D[number]["type"]> =
+  DefinitionByType<D, T> extends { capabilities: infer C } ? C : never;
+
+// Get all the keys of the enabled capabilities for a definition
+type DefinitionEnabledCapabilityKeys<
+  D extends DefinitionSchema,
+  T extends D[number]["type"],
+> = {
+  [K in keyof DefinitionCapabilities<D, T>]:
+  DefinitionCapabilities<D, T>[K] extends { enabled: true } ? K : never
+}[keyof DefinitionCapabilities<D, T>];
+
+// Metaobject-level capability shapes
+type MetaobjectCapabilityDataMap = {
+  onlineStore: Omit<MetaobjectCapabilityDataOnlineStore, '__typename'>;
+  publishable: Omit<MetaobjectCapabilityDataPublishable, '__typename'>;
+};
+
+// Extract the capabilities data for metaobject given the definition capabilities
+type MetaobjectCapabilitiesFromDefinition<
+  D extends DefinitionSchema,
+  T extends D[number]["type"],
+> = {
+  [K in DefinitionEnabledCapabilityKeys<D, T> & keyof MetaobjectCapabilityDataMap]:
+    MetaobjectCapabilityDataMap[K]
+};
 
 /**
  * --------------------------------------------------------------------------------------------
@@ -197,7 +218,7 @@ export type DefinitionSchemaEntry = {
   description?: string;
   displayNameKey?: string;
   access?: MetaobjectAccessInput;
-  capabilities?: Partial<CapabilityConfigMap>;
+  capabilities?: Partial<DefinitionCapabilityConfigMap>;
   fields: readonly FieldDefinition[];
 };
 
@@ -453,7 +474,7 @@ export type FromDefinitionWithSystemData<
     id: string;
     handle: string;
     displayName: string;
-    capabilities: MetaobjectCapabilityData;
+    capabilities: MetaobjectCapabilitiesFromDefinition<D, T>;
     createdAt: Date;
     updatedAt: Date;
     thumbnail: MetaobjectThumbnail | null;

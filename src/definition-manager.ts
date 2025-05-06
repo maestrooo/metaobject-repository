@@ -31,6 +31,8 @@ export class DefinitionManager {
           type
           name
           description
+          createdAt
+          updatedAt
           displayNameKey
           hasThumbnailField
           metaobjectsCount

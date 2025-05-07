@@ -2,9 +2,9 @@ import { GraphQLClient } from "node_modules/@shopify/shopify-app-remix/dist/ts/s
 import { AdminOperations } from "@shopify/admin-api-client";
 import { FieldBuilder, QueryBuilder } from "raku-ql";
 import { camel } from "snake-camel";
-import { Collection, Company, Customer, GenericFile, Job, MediaImage, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectStatus, MetaobjectUpdatePayload, MetaobjectUpsertPayload, Page, PageInfo, Product, ProductVariant, TaxonomyValue, Video } from "~/types/admin.types";
+import { Collection, Company, Customer, GenericFile, Job, MediaImage, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload, Page, PageInfo, Product, ProductVariant, TaxonomyValue, Video } from "~/types/admin.types";
 import { DefinitionSchema, DefinitionSchemaEntry, FieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./types/definitions";
-import { CreateInput, FindOptions, EmptyObjectOptions, OnPopulateFunc, PopulateOptions, SortKey, UpdateInput, UpsertInput, EmptyObject } from "./types/metaobject-repository";
+import { CreateInput, FindOptions, EmptyObjectOptions, OnPopulateFunc, PopulateOptions, SortKey, UpdateInput, UpsertInput, EmptyObject, FieldsInput } from "./types/metaobject-repository";
 import { UserErrorsException } from "./exception/user-errors-exception";
 import { deserialize, serializeFields } from "./transformer";
 
@@ -30,8 +30,7 @@ export class MetaobjectRepository<
   /**
    * Generate a new empty object that contains all the fields of the definition, set to empty value
    */
-  
-  getEmptyObject(opts?: EmptyObjectOptions<D, T>): EmptyObject<FromDefinitionWithSystemData<D, T>> {
+  getEmptyObject<DV extends keyof FieldsInput<D, T> = never>(opts?: EmptyObjectOptions<D, T, DV>): EmptyObject<D, T, DV> {
     const definition = this.getDefinitionSchemaEntry(this.type);
 
     let data: any = {

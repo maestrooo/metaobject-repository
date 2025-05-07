@@ -1,3 +1,8 @@
+## 0.8.6
+
+- Typing for `getEmptyObject` has been improved: it now takes into account defaultValues and properly type the values that have been explicitly set.
+- Typing for `createFormState` has been improved: when using references or list of references, the form state will now be properly typed with strings (reference IDs).
+
 ## 0.8.5
 
 - Typing for JSON fields with a validation schema is now honored for create, update, upsert and getEmptyObject.

@@ -4,16 +4,43 @@
 type SpecialKey = "id" | "handle" | "capabilities";
 type AllowedKeys<T> = Exclude<keyof T, "system"> | SpecialKey;
 
-type ExtractFormValue<V> =
-  V extends readonly (infer U)[]
-    ? Array<ExtractFormValue<U>>
-  : V extends string | number | boolean
+type BaseExtract<V> =
+  // arrays recurse
+  V extends readonly (infer U)[] 
+    ? Array<BaseExtract<U>>
+  // primitives passthrough
+  : V extends string | number | boolean 
     ? V
-  : V extends { id: any }
+  // “node” objects become string
+  : V extends { id?: any; __typename?: any } 
     ? string
-  : V extends object
-    ? { [K in keyof V]-?: ExtractFormValue<V[K]> }
+  // the system.id case
+  : V extends { system: { id: any } } 
+    ? string
+  // any other object stays as the object
+  : V extends object 
+    ? V
+  // fallback
   : string;
+
+// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// 2) Helper: if V includes `string` *and* at least one other non-nullish type, then
+//    drop the `string` branch and add `null`.  Otherwise leave V untouched.
+// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+type Adjust<V> =
+  // Do we even have `string` in V?
+  string extends V
+    ? // If you remove both `string` and `null` from V, 
+      // is there *anything* left?
+      Exclude<V, string | null> extends never
+        ? V                       // only `string` (or `string|null`) → leave it
+        : Exclude<V, string> | null  // there was some other type → drop `string`, add `null`
+    : V;                        // no `string` at all → leave it
+
+// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// 3) Glue them together into your final ExtractFormValue
+// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+type ExtractFormValue<V> = Adjust<BaseExtract<V>>;
 
 type FormState<
   T extends { system?: { id?: any; handle?: any, capabilities?: any } | null },
@@ -57,6 +84,23 @@ export function createFormState(obj: any, keys?: string[]) {
 
   const result: any = {};
 
+  const convertValue = (value: any): any => {
+    if (value === null || value === undefined) {
+      return '';
+    } else if (Array.isArray(value)) {
+      return value.map(convertValue);
+    } else if (typeof value === 'object') {
+      if ('id' in value && '__typename' in value) {
+        return value.id;
+      } else if ('system' in value && 'id' in value.system) {
+        return value.system.id;
+      }
+      return value; // Otherwise we return the object (this will be the case for JSON fields)
+    }
+
+    return String(value);
+  }
+
   for (const key of actualKeys) {
     if (key === "id") {
       result[key] = obj.system?.id ?? '';
@@ -73,37 +117,12 @@ export function createFormState(obj: any, keys?: string[]) {
       // 1) null or undefined?
       if (val === null || val === undefined) {
         result[key] = ''; // We treat those as empty strings to make it easier to use in forms
-      }
-      // 2) array? 
-      else if (Array.isArray(val)) {
+      } else if (Array.isArray(val)) {
         result[key] = val.map(item => {
-          // array of { id }?
-          if (item != null && typeof item === "object" && "id" in item) {
-            return (item as any).id;
-          }
-          // primitive?
-          if (["string", "number", "boolean"].includes(typeof item)) {
-            return item;
-          }
-          // fallback
-          return String(item);
+          return convertValue(item);
         });
-      }
-      // 3) single object with id?
-      else if (val != null && typeof val === "object") {
-        if ("id" in val && "__typename" in val) {
-          result[key] = (val as any).id;
-        } else {
-          result[key] = val; // Otherwise we return the object (this will be the case for JSON fields)
-        }
-      }
-      // 4) primitive
-      else if (["string", "number", "boolean"].includes(typeof val)) {
-        result[key] = val;
-      }
-      // 5) anything else → string
-      else {
-        result[key] = String(val);
+      } else {
+        result[key] = convertValue(val);
       }
     }
   }

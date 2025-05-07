@@ -6,7 +6,7 @@
 
 import { JSONSchema, FromSchema } from "json-schema-to-ts";
 import { FieldBuilder } from "raku-ql";
-import { CamelCase, CamelCaseKeys, DefaultMap, DefinitionByType, DefinitionSchema, FieldDefinition } from "./definitions";
+import { CamelCase, CamelCaseKeys, DefaultMap, DefinitionByType, DefinitionSchema, FieldDefinition, FromDefinitionWithSystemData } from "./definitions";
 import { MetaobjectCapabilityDataOnlineStoreInput, MetaobjectCapabilityDataPublishableInput, MetaobjectStatus } from "./admin.types";
 
 /**
@@ -48,7 +48,7 @@ type FieldTypeOf<D extends DefinitionSchema, T extends D[number]["type"], P exte
     { key: P }
   >["type"];
 
-type FieldsInput<D extends DefinitionSchema, T extends D[number]["type"]> = {
+export type FieldsInput<D extends DefinitionSchema, T extends D[number]["type"]> = {
   // required fields
   [P in RequiredKeys<D, T> as CamelCase<P>]:
     FieldTypeOf<D, T, P> extends "json"
@@ -93,23 +93,41 @@ export type UpsertInput<D extends DefinitionSchema, T extends D[number]["type"]>
 
 /**
  * --------------------------------------------------------------------------------------------
- * Types for pagination, find options and empty options
+ * Types for empty options and empty object
  * --------------------------------------------------------------------------------------------
  */
 
-export type EmptyObject<T extends { system: object }> = Omit<T, "system"> & {
-  system: {
-    [K in keyof T["system"]]:
-      K extends "type" | "capabilities"
-        ? T["system"][K]
-        : T["system"][K] | null;
-  };
+export type EmptyObject<
+  D extends DefinitionSchema,
+  T extends D[number]['type'],
+  DV extends keyof FieldsInput<D, T>,
+  U extends FromDefinitionWithSystemData<D, T> = FromDefinitionWithSystemData<D, T>
+> = {
+  [K in Exclude<keyof U, 'system'>]:
+    // if the user provided a default for K, strip null; otherwise keep U[K] as-is
+    K extends DV
+      ? NonNullable<U[K]>
+      : null
+  } & {
+    // re-build `system` exactly as before
+    system: {
+      [SK in keyof U['system']]:
+        SK extends 'type' | 'capabilities'
+          ? U['system'][SK]
+          : U['system'][SK] | null
+    }
+  }
+
+export type EmptyObjectOptions<D extends DefinitionSchema, T extends D[number]["type"], DV extends keyof FieldsInput<D, T> = never> = {
+  defaultPublishableStatus?: MetaobjectStatus;
+  defaultValues?: Pick<FieldsInput<D, T>, DV>;
 };
 
-export type EmptyObjectOptions<D extends DefinitionSchema, T extends D[number]["type"]> = {
-  defaultPublishableStatus?: MetaobjectStatus;
-  defaultValues?: Partial<FieldsInput<D, T>>;
-};
+/**
+ * --------------------------------------------------------------------------------------------
+ * Types for pagination, find options
+ * --------------------------------------------------------------------------------------------
+ */
 
 export type OnPopulateFunc = (fieldDefinition: FieldDefinition, fieldBuilder: FieldBuilder) => void;
 

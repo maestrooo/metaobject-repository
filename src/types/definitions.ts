@@ -418,25 +418,29 @@ export type FromDefinition<
         )
       // a) LIST fields
       : F["type"] extends `list.${infer U extends BaseFieldType}`
-        ? (
-            // mixed_reference → array of union
-            U extends "mixed_reference"
-              ? F extends { metaobjectTypes: infer MTE extends readonly D[number]["type"][] }
-                ? Array<FromDefinitionWithSystemData<D, MTE[number], Tail<P, CamelCase<F["key"]>>>>
-                : Array<PopulatedMap["mixed_reference"]>
-            // metaobject_reference → array of object
-            : U extends "metaobject_reference"
-              ? F extends { metaobjectType: infer MT extends string }
-                ? Array<FromDefinitionWithSystemData<D, MT, Tail<P, CamelCase<F["key"]>>>>
-                : Array<PopulatedMap["metaobject_reference"]>
-            // file_reference → array of FileMapping
-            : U extends "file_reference"
-              ? F extends { validations: { fileTypeOptions: infer FT extends readonly FileTypeVal[] } }
-                ? Array<FileMapping<FT[number]>>
-                : Array<FileMapping<never>>
-            // fallback → array of default/populated scalar
-            : Array<PopulatedMap[U & keyof PopulatedMap]>
-          )
+        ? CamelCase<F["key"]> extends Head<P>
+          // populated
+          ? (
+              // mixed_reference → array of union
+              U extends "mixed_reference"
+                ? F extends { metaobjectTypes: infer MTE extends readonly D[number]["type"][] }
+                  ? Array<FromDefinitionWithSystemData<D, MTE[number], Tail<P, CamelCase<F["key"]>>>>
+                  : Array<PopulatedMap["mixed_reference"]>
+              // metaobject_reference → array of object
+              : U extends "metaobject_reference"
+                ? F extends { metaobjectType: infer MT extends string }
+                  ? Array<FromDefinitionWithSystemData<D, MT, Tail<P, CamelCase<F["key"]>>>>
+                  : Array<PopulatedMap["metaobject_reference"]>
+              // file_reference → array of FileMapping
+              : U extends "file_reference"
+                ? F extends { validations: { fileTypeOptions: infer FT extends readonly FileTypeVal[] } }
+                  ? Array<FileMapping<FT[number]>>
+                  : Array<FileMapping<never>>
+              // fallback → array of default/populated scalar
+              : Array<PopulatedMap[U & keyof PopulatedMap]>
+            )
+          // — **not** populated → fall back to the scalar/string form
+          : Array<DefaultMap[U & keyof DefaultMap]>
         // b) NON-list & populated
         : CamelCase<F["key"]> extends Head<P>
           ? (

@@ -1,130 +1,112 @@
 // ─────────────────────────────────────────────────────────────────────────────
+// 1) Helper Types
 
-// 1) (Re-use your existing helper types…)
-type SpecialKey = "id" | "handle" | "capabilities";
-type AllowedKeys<T> = Exclude<keyof T, "system"> | SpecialKey;
+// ─────────────────────────────────────────────────────────────────────────────
+type SpecialKey = 'id' | 'handle' | 'capabilities';
+type AllowedKeys<T> = Exclude<keyof T, 'system'> | SpecialKey;
 
-type BaseExtract<V> =
-  // arrays recurse
-  V extends readonly (infer U)[] 
-    ? Array<BaseExtract<U>>
-  // primitives passthrough
-  : V extends string | number | boolean 
-    ? V
-  // “node” objects become string
-  : V extends { id?: any; __typename?: any } 
-    ? string
-  // the system.id case (for nested metaobjects)
-  : V extends { system: { id: any } } 
-    ? string
-  // any other object stays as the object
-  : V;
+type ExtractFormValue<V> =
+  [V] extends [null | undefined]               ? '' :
+  V extends readonly (infer U)[]               ? ExtractFormValue<U>[] :
+  V extends string | number | boolean          ? V :
+  V extends { id?: any; __typename?: any }     ? string :
+  V extends { system: { id: any } }            ? string :
+  V;
 
-// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-// 2) Glue them together into your final ExtractFormValue
-// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// derive which keys go into `fields`
+type FieldKeys<T,K extends readonly AllowedKeys<T>[]> =
+  Extract<keyof Omit<T, 'system'>, K[number]>;
 
-// undefined and null are excluded, because when converted to a form state, unknown
-// values are treated as empty strings to make it easier to use in forms
-type ExtractFormValue<V> = Exclude<BaseExtract<V>, undefined | null>;
-
+// the final shape
 type FormState<
   T extends { system?: { id?: any; handle?: any; capabilities?: any } | null },
   K extends readonly AllowedKeys<T>[]
 > = {
-  [P in K[number]]:
-    // 1) If P is a key on T, map through ExtractFormValue
-    P extends keyof T
-      ? ExtractFormValue<T[P]>
-
-    // 2) If P === "id", infer the actual ID type from T.system.id
-    : P extends "id"
-      ? T extends { system: { id: infer ID } } ? ID : null
-
-    // 3) If P === "handle", infer the actual handle type
-    : P extends "handle"
-      ? T extends { system: { handle: infer H } } ? H : null
-
-    // 4) If P === "capabilities", infer that exact shape
-    : P extends "capabilities"
-      ? T extends { system: { capabilities: infer C } } ? C : null
-
-    // 5) Otherwise it’s never (shouldn’t happen)
-    : never;
+  id:           T extends { system: { id: infer ID } }           ? ID : "";
+  handle:       T extends { system: { handle: infer H } }       ? H  : "";
+  capabilities: T extends { system: { capabilities: infer C } }  ? C  : never;
+  fields: {
+    [P in FieldKeys<T, K>]: ExtractFormValue<T[P]>;
+  };
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2) Defaults & Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+const specialKeysSet = new Set<SpecialKey>(['id', 'handle', 'capabilities']);
+
+const defaultCapabilities = {
+  onlineStore: { templateSuffix: '' },
+  publishable: { enabled: 'ACTIVE' }
+};
+
+function formatValue(value: unknown): unknown {
+  if (value == null) {
+    return '';
+  }
+  
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(formatValue);
+  }
+  
+  if (typeof value === 'object') {
+    const v = value as Record<string, any>;
+
+    if ('id' in v && '__typename' in v) {
+      return v.id;
+    }
+
+    if (v.system && typeof v.system.id !== 'undefined') {
+      return v.system.id;
+    }
+
+    return v;
+  }
+
+  return String(value);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3) Overloads
 // ─────────────────────────────────────────────────────────────────────────────
 export function createFormState<
-  T extends { system?: { id?: any; handle?: any } | null }
+  T extends { system?: Record<string, any> | null }
 >(obj: T): FormState<T, AllowedKeys<T>[]>;
 
 export function createFormState<
-  T extends { system?: { id?: any; handle?: any } | null },
+  T extends { system?: Record<string, any> | null },
   const K extends readonly AllowedKeys<T>[]
 >(obj: T, keys: K): FormState<T, K>;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3) Implementation with correct `id`‐extraction
+// 4) Implementation
 // ─────────────────────────────────────────────────────────────────────────────
-export function createFormState(obj: any, keys?: string[]) {
-  const actualKeys: string[] =
-    keys && keys.length > 0
-      ? keys
-      : [
-          ...Object.keys(obj).filter((k) => k !== "system"),
-          "id",
-          "handle",
-          "capabilities"
-        ];
+export function createFormState(obj: any, keys?: readonly string[]) {
+  const { system = {}, ...rest } = obj;
 
-  const result: any = {};
+  const id           = system.id           ?? '';
+  const handle       = system.handle       ?? '';
+  const capabilities = system.capabilities ?? defaultCapabilities;
 
-  const convertValue = (value: any): any => {
-    if (value === null || value === undefined) {
-      return '';
-    } else if (typeof value === 'boolean') { 
-      return value;
-    } else if (Array.isArray(value)) {
-      return value.map(convertValue);
-    } else if (typeof value === 'object') {
-      if ('id' in value && '__typename' in value) {
-        return value.id;
-      } else if ('system' in value && 'id' in value.system) {
-        return value.system.id;
-      }
-      return value; // Otherwise we return the object (this will be the case for JSON fields)
-    }
+  // determine which keys to include in `fields`
+  const candidateKeys = keys && keys.length > 0
+    ? keys
+    : Object.keys(rest);
 
-    return String(value);
-  }
+  const fieldsEntries = candidateKeys
+    .filter(k => !specialKeysSet.has(k as SpecialKey))
+    .map(k => [k, formatValue(rest[k as keyof typeof rest])]);
 
-  for (const key of actualKeys) {
-    if (key === "id") {
-      result[key] = obj.system?.id ?? '';
-    } else if (key === "handle") {
-      result[key] = obj.system?.handle ?? '';
-    } else if (key === "capabilities") {
-      result[key] = obj.system?.capabilities ?? {
-        onlineStore: { templateSuffix: '' },
-        publishable: { enabled: 'ACTIVE' }
-      };
-    } else {
-      const val = obj[key];
+  const fields = Object.fromEntries(fieldsEntries);
 
-      // 1) null or undefined?
-      if (val === null || val === undefined) {
-        result[key] = ''; // We treat those as empty strings to make it easier to use in forms
-      } else if (Array.isArray(val)) {
-        result[key] = val.map(item => {
-          return convertValue(item);
-        });
-      } else {
-        result[key] = convertValue(val);
-      }
-    }
-  }
-
-  return result;
+  return {
+    id,
+    handle,
+    capabilities,
+    fields
+  } as any;
 }

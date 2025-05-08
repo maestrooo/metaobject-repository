@@ -1,3 +1,22 @@
+## 0.11.0
+
+- [BC] The `createFormState` now returns the fields under the `fields` key. This better separate actual fields from system data (such as id or handle) and allows more logical validations, avoid clash namings (you can now have a field named `id` that it won't cause problem).
+
+Before:
+```ts
+const formState = createFormState(object);
+
+// You could access fields using the key:
+formState.name;
+```
+
+After:
+```ts
+const { id, handle, fields } = createFormState(object);
+
+// You could access fields using the key:
+fields.name;
+
 ## 0.10.2
 
 - Fix deserialization of JSON type fields. Their content are now properly converted to camelCase (to make it consistent to use in JS).

@@ -837,9 +837,11 @@ const formState = createFormState(myObject);
     publishable: { enabled: 'ACTIVE' }
   },
   handle: "my-handle",
-  title: "bar",
-  icon: "gid://shopify/MediaImage/456",
-  product: "gid://shopify/Product/678"
+  fields: {
+    title: "bar",
+    icon: "gid://shopify/MediaImage/456",
+    product: "gid://shopify/Product/678"
+  }
 }
 */
 
@@ -849,13 +851,18 @@ const formState = createFormState(myObject, ['id', 'title']);
 /* Will be this:
 {
   id: "gid://shopify/Metaobject/123",
-  title: "bar"
+  capabilities: {
+    publishable: { enabled: 'ACTIVE' }
+  },
+  handle: "my-handle",
+  fields: {
+    title: "bar"
+  }
 }
 */
 ```
 
-Note that id, handle and capabilities are flattened as top keys from the `system` key. If you are using a validation library like `zod`, make sure
-to match the same structure.
+> All fields are moved into the fields top key, to ensure it avoids name clashes, and make easier validations.
 
 ### Working with empty object
 

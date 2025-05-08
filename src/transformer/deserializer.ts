@@ -1,4 +1,4 @@
-import { camel } from "snake-camel";
+import { toCamel, camel } from "snake-camel";
 import { Metaobject } from "~/types/admin.types";
 
 export function deserialize<T>(metaobject: Metaobject): T {
@@ -20,6 +20,15 @@ export function deserialize<T>(metaobject: Metaobject): T {
 
     if (field.type.startsWith('list.')) {
       data[key] = field.jsonValue ?? [];
+    } else if (field.type === 'json') {
+      if (Array.isArray(field.jsonValue)) {
+        data[key] = field.jsonValue.map(toCamel);
+      } else {
+        data[key] = toCamel(field.jsonValue);
+      }
+    } else if (field.type === 'boolean') {
+      // By default Shopify saves booleans as strings, so we need to convert them to boolean
+      data[key] = field.jsonValue === 'true' || field.jsonValue === true;
     } else {
       data[key] = field.jsonValue;
     }

@@ -84,6 +84,8 @@ export function createFormState(obj: any, keys?: string[]) {
   const convertValue = (value: any): any => {
     if (value === null || value === undefined) {
       return '';
+    } else if (typeof value === 'boolean') { 
+      return value;
     } else if (Array.isArray(value)) {
       return value.map(convertValue);
     } else if (typeof value === 'object') {

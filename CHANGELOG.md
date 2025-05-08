@@ -1,3 +1,8 @@
+## 0.10.2
+
+- Fix deserialization of JSON type fields. Their content are now properly converted to camelCase (to make it consistent to use in JS).
+- Fix deserialization to convert boolean (which are internally stored as a string in Shopify) to a boolean, to make it easier to use.
+
 ## 0.10.0/0.10.1
 
 - [BC] The `getDefinitionByType` now throws a `NotFoundException` exception if the definition does not exist, instead of returning null.

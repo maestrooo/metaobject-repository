@@ -465,7 +465,7 @@ export type FromDefinition<
         // c) fallback → default scalar
         : DefaultMap[F["type"] & keyof DefaultMap]
     >;
-};
+}
 
 // Extra type adding system information when the object is populated from Shopify
 export type FromDefinitionWithSystemData<

@@ -260,7 +260,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 ### Retrieving a definition
 
-You can get information about a definition by using the `getDefinitionByType`:
+You can get information about a definition by using the `getDefinitionByType`. If the definition does not exist (this normally should not happen if you ensure that your definitions are created), an exception is thrown.
 
 ```ts
 import { definitionManager } from "metaobject-repository";

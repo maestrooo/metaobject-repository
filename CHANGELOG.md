@@ -1,3 +1,7 @@
+## 0.10.0
+
+- [BC] The `getDefinitionByType` now throws an exception if the definition does not exist, instead of returning null.
+
 ## 0.9.0
 
 - [BC] I have removed the function `getEmptyObject` from the repository. After testing it, I felt it was an incorrect abstraction. The `getEmptyObject` was basically just used to generate an empty object with everything to null, whose only goal was to then convert it to a form state by using the `createFormState`. This, indirectly, couples the repository with a UI concern (generating a form state). A better solution is to actually manually creating your form state explicitly:

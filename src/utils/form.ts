@@ -4,40 +4,57 @@
 type SpecialKey = "id" | "handle" | "capabilities";
 type AllowedKeys<T> = Exclude<keyof T, "system"> | SpecialKey;
 
-type ExtractFormValue<V> =
+type BaseExtract<V> =
   // arrays recurse
   V extends readonly (infer U)[] 
-    ? Array<ExtractFormValue<U>>
+    ? Array<BaseExtract<U>>
   // primitives passthrough
   : V extends string | number | boolean 
     ? V
   // “node” objects become string
   : V extends { id?: any; __typename?: any } 
     ? string
-  // the system.id case
+  // the system.id case (for nested metaobjects)
   : V extends { system: { id: any } } 
     ? string
   // any other object stays as the object
-  : V extends object 
-    ? V
-  // fallback
-  : string;
+  : V;
+
+// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// 2) Glue them together into your final ExtractFormValue
+// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+// undefined and null are excluded, because when converted to a form state, unknown
+// values are treated as empty strings to make it easier to use in forms
+type ExtractFormValue<V> = Exclude<BaseExtract<V>, undefined | null>;
 
 type FormState<
-  T extends { system?: { id?: any; handle?: any, capabilities?: any } | null },
+  T extends { system?: { id?: any; handle?: any; capabilities?: any } | null },
   K extends readonly AllowedKeys<T>[]
 > = {
   [P in K[number]]:
-    P extends keyof T   ? Exclude<ExtractFormValue<T[P]>, undefined> :
-    P extends "id"      ? string | null :
-    P extends "handle"  ? string | null :
-    P extends "capabilities" ? (T extends { system?: { capabilities: infer C } } ? C : null) :
-    never;
+    // 1) If P is a key on T, map through ExtractFormValue
+    P extends keyof T
+      ? ExtractFormValue<T[P]>
+
+    // 2) If P === "id", infer the actual ID type from T.system.id
+    : P extends "id"
+      ? T extends { system: { id: infer ID } } ? ID : null
+
+    // 3) If P === "handle", infer the actual handle type
+    : P extends "handle"
+      ? T extends { system: { handle: infer H } } ? H : null
+
+    // 4) If P === "capabilities", infer that exact shape
+    : P extends "capabilities"
+      ? T extends { system: { capabilities: infer C } } ? C : null
+
+    // 5) Otherwise it’s never (shouldn’t happen)
+    : never;
 };
 
-
 // ─────────────────────────────────────────────────────────────────────────────
-// 2) Overloads
+// 3) Overloads
 // ─────────────────────────────────────────────────────────────────────────────
 export function createFormState<
   T extends { system?: { id?: any; handle?: any } | null }

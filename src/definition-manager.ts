@@ -20,9 +20,9 @@ export class DefinitionManager {
   }
 
   /**
-   * Get the definition by type. If the definition doesn't exist, returns null
+   * Get the definition by type. If the definition doesn't exist, it throws an exception
    */
-  async getDefinitionByType(type: string): Promise<Omit<MetaobjectDefinition, 'createdByApp' | 'createdByStaff' | 'metaobjects' | 'standardTemplate'> | null> {
+  async getDefinitionByType(type: string): Promise<Omit<MetaobjectDefinition, 'createdByApp' | 'createdByStaff' | 'metaobjects' | 'standardTemplate'>> {
     const response = await this.client(
       `#graphql
       query GetMetaobjectDefinitionByType($type: String!) {
@@ -84,6 +84,10 @@ export class DefinitionManager {
     );
 
     const responseJson = await response.json();
+
+    if (!responseJson.data.metaobjectDefinitionByType) {
+      throw new Error(`Metaobject definition with type "${type}" was not found`);
+    }
 
     return responseJson.data.metaobjectDefinitionByType;
   }

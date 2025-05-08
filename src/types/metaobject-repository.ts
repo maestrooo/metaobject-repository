@@ -6,8 +6,9 @@
 
 import { JSONSchema, FromSchema } from "json-schema-to-ts";
 import { FieldBuilder } from "raku-ql";
-import { CamelCase, CamelCaseKeys, DefaultMap, DefinitionByType, DefinitionSchema, FieldDefinition, FromDefinitionWithSystemData } from "./definitions";
-import { MetaobjectCapabilityDataOnlineStoreInput, MetaobjectCapabilityDataPublishableInput, MetaobjectStatus } from "./admin.types";
+import { CamelCase, CamelCaseKeys, DefaultMap, DefinitionByType, DefinitionSchema, FieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./definitions";
+import { MetaobjectCapabilityDataOnlineStoreInput, MetaobjectCapabilityDataPublishableInput } from "./admin.types";
+import { MetaobjectRepository } from "~/metaobject-repository";
 
 /**
  * --------------------------------------------------------------------------------------------
@@ -93,38 +94,6 @@ export type UpsertInput<D extends DefinitionSchema, T extends D[number]["type"]>
 
 /**
  * --------------------------------------------------------------------------------------------
- * Types for empty options and empty object
- * --------------------------------------------------------------------------------------------
- */
-
-export type EmptyObject<
-  D extends DefinitionSchema,
-  T extends D[number]['type'],
-  DV extends keyof FieldsInput<D, T>,
-  U extends FromDefinitionWithSystemData<D, T> = FromDefinitionWithSystemData<D, T>
-> = {
-  [K in Exclude<keyof U, 'system'>]:
-    // if the user provided a default for K, strip null; otherwise keep U[K] as-is
-    K extends DV
-      ? NonNullable<U[K]>
-      : null
-  } & {
-    // re-build `system` exactly as before
-    system: {
-      [SK in keyof U['system']]:
-        SK extends 'type' | 'capabilities'
-          ? U['system'][SK]
-          : U['system'][SK] | null
-    }
-  }
-
-export type EmptyObjectOptions<D extends DefinitionSchema, T extends D[number]["type"], DV extends keyof FieldsInput<D, T> = never> = {
-  defaultPublishableStatus?: MetaobjectStatus;
-  defaultValues?: Pick<FieldsInput<D, T>, DV>;
-};
-
-/**
- * --------------------------------------------------------------------------------------------
  * Types for pagination, find options
  * --------------------------------------------------------------------------------------------
  */
@@ -169,3 +138,32 @@ type BackwardFindOptions = CommonFindOptions & {
 
 // Union forces “at least one of first|last” and applies the mutual-exclusion rules
 export type FindOptions = ForwardFindOptions | BackwardFindOptions;
+
+/**
+ * --------------------------------------------------------------------------------------------
+ * Utility types
+ * --------------------------------------------------------------------------------------------
+ */
+
+export type InferObjectType<A, B = never, C extends any[] = []> =
+  // ————————————————————————————————————————————————————————————————————————
+  // 1) if A is a MetaobjectRepository<D,T>, 
+  //    then B is the array of populate-paths:
+  A extends MetaobjectRepository<infer D, infer T>
+    ? // "no B supplied" check:
+      [B] extends [never]
+        ? FromDefinitionWithSystemData<D, T, never>
+        : // otherwise validate your array of paths:
+        B extends ValidPopulatePaths<D, T>[]
+          ? FromDefinitionWithSystemData<D, T, B[number]>
+          : never
+  // ————————————————————————————————————————————————————————————————————————
+  // 2) otherwise if A is a raw DefinitionSchema, 
+  //    B is the object-type string, C is the populate-paths array:
+  : A extends DefinitionSchema
+    ? B extends A[number]['type']
+      ? C extends ValidPopulatePaths<A, B>[]
+        ? FromDefinitionWithSystemData<A, B, C[number]>
+        : never
+      : never
+  : never;

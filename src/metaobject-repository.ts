@@ -4,7 +4,7 @@ import { FieldBuilder, QueryBuilder } from "raku-ql";
 import { camel } from "snake-camel";
 import { Collection, Company, Customer, GenericFile, Job, MediaImage, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload, Page, PageInfo, Product, ProductVariant, TaxonomyValue, Video } from "~/types/admin.types";
 import { DefinitionSchema, DefinitionSchemaEntry, FieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./types/definitions";
-import { CreateInput, FindOptions, EmptyObjectOptions, OnPopulateFunc, PopulateOptions, SortKey, UpdateInput, UpsertInput, EmptyObject, FieldsInput } from "./types/metaobject-repository";
+import { CreateInput, FindOptions, OnPopulateFunc, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "./types/metaobject-repository";
 import { UserErrorsException } from "./exception/user-errors-exception";
 import { deserialize, serializeFields } from "./transformer";
 
@@ -25,50 +25,6 @@ export class MetaobjectRepository<
   withClient(client: GraphQLClient<AdminOperations>): this {
     this.client = client;
     return this;
-  }
-
-  /**
-   * Generate a new empty object that contains all the fields of the definition, set to empty value
-   */
-  getEmptyObject<DV extends keyof FieldsInput<D, T> = never>(opts?: EmptyObjectOptions<D, T, DV>): EmptyObject<D, T, DV> {
-    const definition = this.getDefinitionSchemaEntry(this.type);
-
-    let data: any = {
-      system: {
-        id: null,
-        handle: null,
-        type: this.type,
-        displayName: '',
-        capabilities: {},
-        createdAt: null,
-        updatedAt: null,
-        thumbnail: null
-      }
-    };
-
-    Object.keys(definition.capabilities || {}).forEach(capability => {
-      if (capability === 'publishable') {
-        data.system.capabilities.publishable = {
-          status: opts?.defaultPublishableStatus || 'ACTIVE'
-        }
-      } else if (capability === 'onlineStore') {
-        data.system.capabilities.onlineStore = {
-          templateSuffix: ''
-        }
-      }
-    })
-
-    definition.fields.forEach((field) => {
-      const key = camel(field.key);
-
-      if (opts?.defaultValues && key in opts.defaultValues) {
-        data[key] = opts.defaultValues?.[key as keyof typeof opts.defaultValues];
-      } else {
-        data[key] = field.type.startsWith('list.') ? [] : null;
-      }
-    });
-
-    return data;
   }
 
   /**

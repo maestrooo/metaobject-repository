@@ -781,45 +781,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 ## Recipes
 
-### Creating empty object
+### Inferring a type
 
-It is often needed, in loaders, to create an empty object that will be populated in a form. To ensure you get a typed object, you can use the
-utility method `getEmptyObject` defined in all repositories. This will create an object with all properties set to null for scalar fields, and
-empty array for list fields. You can then use the `createFormState` utility method if you want to have a usable array for forms.
+It can be useful to generate a type from an object returned by the metaobject repository, optionally populated. To do that, you can use the `InferObjectType` utility type:
 
 ```ts
-export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
-  let event = null;
+import { InferObjectType } from "metaobject-repository";
 
-  if (params.id === 'new') {
-    event = eventRepository.getEmptyObject();
-  } else {
-    event = await eventRepository.withClient(admin.graphql).findById(params.id);
-  }
+// With a definitions
+const { definitions } from 'your-definitions';
+type Event = InferObjectType<typeof definitions, '$app:event', ['image']>;
 
-  return { event };
-}
+// With a repository
+type Event = InferObjectType<typeof eventRepository, ['image']>;
 ```
-
-When creating an empty object, the `system` will have all its properties set to null (except the `type` and `capabilities`, which are set to the metaobject type and the default capabilities, respectively), as it has not yet been saved to Shopify. This can be used to differentiate an object that has been persisted yet with an object that has not.
-
-The `getEmptyObject` supports two options:
-
-- `defaultPublishableStatus`: for metaobjects with the publishable capability, this allows to set a default status. If none is passed, the `ACTIVE` value is set.
-- `defaultValues`: set a default value for a given field. This is useful for JSON fields, to set up a custom state.
-
-```ts
-event = eventRepository.getEmptyObject({
-  defaultPublishableStatus: MetaobjectStatus.Draft,
-  defaultValues: {
-    address: { street1: '', street2: '', city: '' }
-  }
-});
-```
-
-> If you are using the `populate` param on the find* methods, then the type won't match, for now I don't know what would be the best solution to
-solve this issue.
 
 ### Creating a form state
 
@@ -854,6 +829,9 @@ const formState = createFormState(myObject);
 /* Will be this:
 {
   id: "gid://shopify/Metaobject/123",
+  capabilities: {
+    publishable: { enabled: 'ACTIVE' }
+  },
   handle: "my-handle",
   title: "bar",
   icon: "gid://shopify/MediaImage/456",
@@ -872,8 +850,28 @@ const formState = createFormState(myObject, ['id', 'title']);
 */
 ```
 
-> If the object is not persisted yet (for instance if you call this method on an empty object created through `getEmptyObject`), then the `id` and
-`handle` will always be null.
+Note that id, handle and capabilities are flattened as top keys from the `system` key. If you are using a validation library like `zod`, make sure
+to match the same structure.
+
+### Working with empty object
+
+When using a create form, it is often useful to have an empty state. In older version of the library, we had a convenience method `getEmptyObject` as part of the metaobject repository. This has been deleted though, as I felt it was not a good abstraction. Instead, to create an empty state, we recommend you to explicitly create an empty object or, better, using a library like `zod` to generate an empty form state:
+
+```ts
+// in your loader
+
+// Manually creating an empty state
+const formState = { 
+  capabilities: { 
+    publishable: { enabled: 'ACTIVE' }
+  },
+  title: '',
+  other: ''
+}
+
+// Or better, by using a library such as zod
+const formState = eventSchema.parse({});
+```
 
 ### Extracting query params
 

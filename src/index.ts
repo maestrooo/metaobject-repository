@@ -6,7 +6,7 @@ export { storefrontTokenRepository, StorefrontTokenRepository } from './storefro
 export { UserErrorsException } from './exception/user-errors-exception';
 
 export type { FieldDefinition, DefinitionSchemaEntry, DefinitionSchema } from './types/definitions';
-export type { OnPopulateFunc } from './types/metaobject-repository';
+export type { InferObjectType, OnPopulateFunc } from './types/metaobject-repository';
 
 export { createFormState } from './utils/form';
 export { extractFindParams } from './utils/params';

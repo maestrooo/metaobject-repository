@@ -4,10 +4,10 @@
 type SpecialKey = "id" | "handle" | "capabilities";
 type AllowedKeys<T> = Exclude<keyof T, "system"> | SpecialKey;
 
-type BaseExtract<V> =
+type ExtractFormValue<V> =
   // arrays recurse
   V extends readonly (infer U)[] 
-    ? Array<BaseExtract<U>>
+    ? Array<ExtractFormValue<U>>
   // primitives passthrough
   : V extends string | number | boolean 
     ? V
@@ -23,31 +23,12 @@ type BaseExtract<V> =
   // fallback
   : string;
 
-// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-// 2) Helper: if V includes `string` *and* at least one other non-nullish type, then
-//    drop the `string` branch and add `null`.  Otherwise leave V untouched.
-// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-type Adjust<V> =
-  // Do we even have `string` in V?
-  string extends V
-    ? // If you remove both `string` and `null` from V, 
-      // is there *anything* left?
-      Exclude<V, string | null> extends never
-        ? V                       // only `string` (or `string|null`) → leave it
-        : Exclude<V, string> | null  // there was some other type → drop `string`, add `null`
-    : V;                        // no `string` at all → leave it
-
-// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-// 3) Glue them together into your final ExtractFormValue
-// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-type ExtractFormValue<V> = Adjust<BaseExtract<V>>;
-
 type FormState<
   T extends { system?: { id?: any; handle?: any, capabilities?: any } | null },
   K extends readonly AllowedKeys<T>[]
 > = {
   [P in K[number]]:
-    P extends keyof T   ? ExtractFormValue<T[P]> :
+    P extends keyof T   ? Exclude<ExtractFormValue<T[P]>, undefined> :
     P extends "id"      ? string | null :
     P extends "handle"  ? string | null :
     P extends "capabilities" ? (T extends { system?: { capabilities: infer C } } ? C : null) :
@@ -66,7 +47,6 @@ export function createFormState<
   T extends { system?: { id?: any; handle?: any } | null },
   const K extends readonly AllowedKeys<T>[]
 >(obj: T, keys: K): FormState<T, K>;
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3) Implementation with correct `id`‐extraction

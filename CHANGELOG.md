@@ -1,3 +1,40 @@
+## 0.9.0
+
+- [BC] I have removed the function `getEmptyObject` from the repository. After testing it, I felt it was an incorrect abstraction. The `getEmptyObject` was basically just used to generate an empty object with everything to null, whose only goal was to then convert it to a form state by using the `createFormState`. This, indirectly, couples the repository with a UI concern (generating a form state). A better solution is to actually manually creating your form state explicitly:
+
+Before:
+```ts
+// in the loader
+const event = eventRepository.getEmptyObject();
+const formState = createFormState(event);
+```
+
+After:
+```ts
+// in the loader
+const formState: createFormState<InferObjectType<typeof eventRepository>>({ fields: { foo: 'Bar' }});
+```
+
+The main difference is that you must explicitly pass the fields. Another (and safer) option, is to use a validation library like `zod`, and re-use the schema to generate an empty form state.
+
+```ts
+// in the loader
+const formState: eventCreateSchema.parse({});
+```
+
+- Adding a new `InferObjectType` utility type, allowing to generate a type with a populated map. You can use it either with the definitions and an explicit type, or by using a repository:
+
+```ts
+// With a definitions
+const { definitions } from 'your-definitions';
+type Event = InferObjectType<typeof definitions, '$app:event', ['image']>;
+
+// With a repository
+type Event = InferObjectType<typeof eventRepository, ['image']>;
+```
+
+- Further improve the typing of the `createFormState` to handle more edge cases.
+
 ## 0.8.6
 
 - Typing for `getEmptyObject` has been improved: it now takes into account defaultValues and properly type the values that have been explicitly set.

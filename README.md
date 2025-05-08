@@ -328,6 +328,8 @@ To get a metaobject by handle, use the `findByHandle`:
 const event = await eventRepository.findByHandle('my-handle', opts);
 ```
 
+You can also use the `findByHandleOrFail` which, instead of returning null if the object does not exist, will throw an exception.
+
 Supported options:
 
 * `populate`
@@ -340,6 +342,8 @@ To get a metaobject by handle, use the `findById`:
 ```ts
 const event = await eventRepository.findById('1234', opts);
 ```
+
+You can also use the `findByIdOrFail` which, instead of returning null if the object does not exist, will throw an exception.
 
 Supported options:
 

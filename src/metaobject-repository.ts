@@ -58,6 +58,22 @@ export class MetaobjectRepository<
   }
 
   /**
+   * Find a metaobject by its ID or throw an error if not found
+   */
+  async findByIdOrFail<P extends ValidPopulatePaths<D, T> = never>(
+    id: string,
+    opts?: PopulateOptions<P>
+  ): Promise<FromDefinitionWithSystemData<D, T, P>> {
+    const metaobject = await this.findById(id, opts);
+
+    if (!metaobject) {
+      throw new Error(`Metaobject with ID ${id} not found`);
+    }
+
+    return metaobject;
+  }
+
+  /**
    * Find a metaobject by handle
    */
   async findByHandle<P extends ValidPopulatePaths<D, T> = never>(
@@ -79,6 +95,22 @@ export class MetaobjectRepository<
     const { metaobjectByHandle } = (await (await this.client(builder.build(), { variables })).json()).data;
 
     return metaobjectByHandle ? deserialize(metaobjectByHandle) : null;
+  }
+
+  /**
+   * Find a metaobject by its handle or throw an error if not found
+   */
+  async findByHandleOrFail<P extends ValidPopulatePaths<D, T> = never>(
+    handle: string,
+    opts?: PopulateOptions<P>
+  ): Promise<FromDefinitionWithSystemData<D, T, P>> {
+    const metaobject = await this.findByHandle(handle, opts);
+
+    if (!metaobject) {
+      throw new Error(`Metaobject with ID ${handle} not found`);
+    }
+
+    return metaobject;
   }
 
   /**

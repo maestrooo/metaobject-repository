@@ -7,6 +7,7 @@ import { DefinitionSchema, DefinitionSchemaEntry, FieldDefinition, FromDefinitio
 import { CreateInput, FindOptions, OnPopulateFunc, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "./types/metaobject-repository";
 import { UserErrorsException } from "./exception/user-errors-exception";
 import { deserialize, serializeFields } from "./transformer";
+import { NotFoundException } from "./exception";
 
 /**
  * Object repository
@@ -67,7 +68,7 @@ export class MetaobjectRepository<
     const metaobject = await this.findById(id, opts);
 
     if (!metaobject) {
-      throw new Error(`Metaobject with ID ${id} not found`);
+      throw new NotFoundException(`Metaobject with ID ${id} not found`);
     }
 
     return metaobject;
@@ -107,7 +108,7 @@ export class MetaobjectRepository<
     const metaobject = await this.findByHandle(handle, opts);
 
     if (!metaobject) {
-      throw new Error(`Metaobject with ID ${handle} not found`);
+      throw new NotFoundException(`Metaobject with ID ${handle} not found`);
     }
 
     return metaobject;

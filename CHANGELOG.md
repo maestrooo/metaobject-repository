@@ -1,6 +1,6 @@
-## 0.10.0
+## 0.10.0/0.10.1
 
-- [BC] The `getDefinitionByType` now throws an exception if the definition does not exist, instead of returning null.
+- [BC] The `getDefinitionByType` now throws a `NotFoundException` exception if the definition does not exist, instead of returning null.
 - Added two new `findByIdOrFail` and `findByHandleOrFail` on the metaobject repository.
 
 ## 0.9.0

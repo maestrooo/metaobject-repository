@@ -1,3 +1,19 @@
+## 0.12.0
+
+- [BC] We're removing the `createFormState`, and replace it by a simpler `flattenFields` function that flatten a nested structure. After using it, I've realized that this abstraction is not really correct and it should not be the responsability of this library to work create form state. Instead, it just offers a utility to flatten the fields. For instance:
+
+```ts
+const event = await eventRepository.findById('123', { populate: ['image' ]});
+
+// event.system <= contains ID, handle...
+// event.image <= contains an image hash with the src, height, width...
+
+const flattenFields = flattenFields(event);
+
+// Will return a new object that excludes system elements, and where relationships are converted to ID:
+// { image: "gid://shopify/Image/345" }
+```
+
 ## 0.11.0
 
 - [BC] The `createFormState` now returns the fields under the `fields` key. This better separate actual fields from system data (such as id or handle) and allows more logical validations, avoid clash namings (you can now have a field named `id` that it won't cause problem).

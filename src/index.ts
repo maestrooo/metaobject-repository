@@ -8,5 +8,5 @@ export { NotFoundException, UserErrorsException } from './exception';
 export type { FieldDefinition, DefinitionSchemaEntry, DefinitionSchema } from './types/definitions';
 export type { InferObjectType, OnPopulateFunc } from './types/metaobject-repository';
 
-export { createFormState } from './utils/form';
+export { flattenFields } from './utils/flatten';
 export { extractFindParams } from './utils/params';

@@ -800,7 +800,7 @@ type Event = InferObjectType<typeof definitions, '$app:event', ['image']>;
 type Event = InferObjectType<typeof eventRepository, ['image']>;
 ```
 
-### Creating a form state
+### Using with form
 
 When using repositories methods, the object is fully expands, and can contain a deep object. The library also adds various information such as the system
 key. At the end, an object might look like this:
@@ -824,13 +824,12 @@ key. At the end, an object might look like this:
 }
 ```
 
-This makes it hard when working with form, as when saving a metaobject we need to have a flat hierarchy. To make it easier to work with forms, you can
-use the `createFormState` method, which will flatten the data, while preserving fully typed object:
+To make it easier to use with forms, you can use the `flattenFields` method. This method returns all the fields, but flattened so that they can be used with forms. Specifically, references will be converted to an ID
 
 ```ts
-const formState = createFormState(myObject);
+const fields = flattenFields(myObject);
 
-/* Will be this:
+/* Assuming the passed objects looks like this:
 {
   id: "gid://shopify/Metaobject/123",
   capabilities: {
@@ -839,30 +838,28 @@ const formState = createFormState(myObject);
   handle: "my-handle",
   fields: {
     title: "bar",
-    icon: "gid://shopify/MediaImage/456",
-    product: "gid://shopify/Product/678"
+    icon: {
+      id: "gid://shopify/MediaImage/456",
+      src: "xxx",
+      // other properties
+    }
+    products: [
+      {
+        id: "gid://shopify/Product/678",
+        title: "Foo"
+      }
+    ]
   }
 }
-*/
 
-// You can also define a subset of fields:
-const formState = createFormState(myObject, ['id', 'title']);
+The returned objects will contain all the fields flattened:
 
-/* Will be this:
 {
-  id: "gid://shopify/Metaobject/123",
-  capabilities: {
-    publishable: { enabled: 'ACTIVE' }
-  },
-  handle: "my-handle",
-  fields: {
-    title: "bar"
-  }
+  title: "bar",
+  icon: "gid://shopify/MediaImage/456",
+  products: ["gid://shopify/Product/678"]
 }
 */
-```
-
-> All fields are moved into the fields top key, to ensure it avoids name clashes, and make easier validations.
 
 ### Working with empty object
 
@@ -872,7 +869,7 @@ When using a create form, it is often useful to have an empty state. In older ve
 // in your loader
 
 // Manually creating an empty state
-const formState = { 
+const object = { 
   capabilities: { 
     publishable: { enabled: 'ACTIVE' }
   },
@@ -984,10 +981,10 @@ export function EventsIndexTable({ events }: EventsIndexTableProps) {
 }
 ```
 
-
 ### Roadmap
 
 * Adding a translation repository to make it easier to translate metaobjects.
 * Adding a `bulkUpsert` method to upsert a high number of objects using a long standing job.
 * Add an `export` method to the repository to export up to 250 metaobjects.
 * Add a `bulkExport` method to export any number of metaobjects, using the bulk API.
+* Find a way to add a `useDirectAccess` method. Right now, it seems that due to some exports done in the repository, this does not work.

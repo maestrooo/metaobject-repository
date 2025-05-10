@@ -1,6 +1,6 @@
-import { GraphQLClient } from "node_modules/@shopify/shopify-app-remix/dist/ts/server/clients/types";
+import { GraphQLClient, GraphQLResponse } from "node_modules/@shopify/shopify-app-remix/dist/ts/server/clients/types";
 import { AdminOperations } from "@shopify/admin-api-client";
-import { FieldBuilder, QueryBuilder } from "raku-ql";
+import { FieldBuilder, OperationBuilder, QueryBuilder } from "raku-ql";
 import { camel } from "snake-camel";
 import { Collection, Company, Customer, GenericFile, Job, MediaImage, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload, Page, PageInfo, Product, ProductVariant, TaxonomyValue, Video } from "~/types/admin.types";
 import { DefinitionSchema, DefinitionSchemaEntry, FieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./types/definitions";
@@ -53,7 +53,7 @@ export class MetaobjectRepository<
       });
     
     const variables = { id: this.transformId(id) };
-    const { metaobject } = (await (await this.client(builder.build(), { variables })).json()).data;
+    const { metaobject } = (await (await this.doRequest({ builder, variables })).json()).data;
 
     return metaobject ? deserialize(metaobject) : null;
   }
@@ -93,7 +93,7 @@ export class MetaobjectRepository<
       });
 
     const variables = { handle: { handle, type: this.type } };
-    const { metaobjectByHandle } = (await (await this.client(builder.build(), { variables })).json()).data;
+    const { metaobjectByHandle } = (await (await this.doRequest({ builder, variables })).json()).data;
 
     return metaobjectByHandle ? deserialize(metaobjectByHandle) : null;
   }
@@ -138,7 +138,7 @@ export class MetaobjectRepository<
         });
       });
 
-    const { nodes } = (await (await this.client(builder.build())).json()).data.metaobjects;
+    const { nodes } = (await (await this.doRequest({ builder })).json()).data.metaobjects;
 
     return nodes.map((metaobject: Metaobject) => deserialize(metaobject));
   }
@@ -176,7 +176,7 @@ export class MetaobjectRepository<
         });
       });
 
-    const { nodes, pageInfo } = (await (await this.client(builder.build())).json()).data.metaobjects;
+    const { nodes, pageInfo } = (await (await this.doRequest({ builder })).json()).data.metaobjects;
 
     return {
       pageInfo,
@@ -222,7 +222,7 @@ export class MetaobjectRepository<
       }
     };
 
-    const { metaobject, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectCreate;
+    const { metaobject, userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metaobjectCreate;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -267,7 +267,7 @@ export class MetaobjectRepository<
       }
     };
 
-    const { metaobjects, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectsCreate;
+    const { metaobjects, userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metaobjectsCreate;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -310,7 +310,7 @@ export class MetaobjectRepository<
       }
     };
 
-    const { metaobject, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectUpdate;
+    const { metaobject, userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metaobjectUpdate;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -356,7 +356,7 @@ export class MetaobjectRepository<
       }
     };
 
-    const { metaobject, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectUpsert;
+    const { metaobject, userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metaobjectUpsert;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -380,7 +380,7 @@ export class MetaobjectRepository<
       });
 
     const variables = { id: this.transformId(id) };
-    const { deletedId, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectDelete; 
+    const { deletedId, userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metaobjectDelete; 
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -411,7 +411,7 @@ export class MetaobjectRepository<
       }
     }
     
-    const { job, userErrors } = (await (await this.client(builder.build(), { variables })).json()).data.metaobjectBulkDelete;
+    const { job, userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metaobjectBulkDelete;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -658,6 +658,14 @@ export class MetaobjectRepository<
    * OTHER UTILITIES
    * --------------------------------------------------------------------------------------------------------
    */
+
+  private doRequest(opts: { builder: OperationBuilder, variables?: Record<string, any> }): Promise<GraphQLResponse<string, AdminOperations>> {
+    if (!this.client) {
+      throw new Error('GraphQL client is not set. Call withClient() on the repository before using this method.');
+    }
+
+    return this.client(opts.builder.build(), { variables: opts.variables });
+  }
 
   /**
    * Ensure that a metaobject ID is always using the GID format

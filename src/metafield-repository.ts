@@ -24,7 +24,7 @@ export class MetafieldRepository {
   /**
    * Get a single app metafield
    */
-  async getAppMetafield(options: { key: string, namespace?: string }): Promise<PickedMetafield | null> {
+  async getAppMetafield(opts: { key: string, namespace?: string }): Promise<PickedMetafield | null> {
     const response = await this.client(
       `#graphql
       query GetAppMetafield($key: String!, $namespace: String) {
@@ -40,8 +40,8 @@ export class MetafieldRepository {
         }
       }`, {
         variables: {
-          key: options.key,
-          namespace: options.namespace
+          key: opts.key,
+          namespace: opts.namespace
         }
       }
     );

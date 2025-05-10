@@ -14,6 +14,8 @@ const flattenFields = flattenFields(event);
 // { image: "gid://shopify/Image/345" }
 ```
 
+I've introduced many breaking changes at a fast pace, but I feel that I am finally getting a nice API, and I'm heading releasing a first stable release in a few weeks.
+
 ## 0.11.0
 
 - [BC] The `createFormState` now returns the fields under the `fields` key. This better separate actual fields from system data (such as id or handle) and allows more logical validations, avoid clash namings (you can now have a field named `id` that it won't cause problem).

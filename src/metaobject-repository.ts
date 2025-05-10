@@ -597,7 +597,7 @@ export class MetaobjectRepository<
                 if (fieldDefinition.validations?.fileTypeOptions?.includes('Image')) {
                   reference.inlineFragment<MediaImage>('MediaImage', (fragment) => {
                     fragment
-                      .fields('id')
+                      .fields('id', 'fileStatus')
                       .object('image', (image) => {
                         image.fields('id', 'altText', 'height', 'width', 'url');
                       })
@@ -607,7 +607,7 @@ export class MetaobjectRepository<
                 if (fieldDefinition.validations?.fileTypeOptions?.includes('Video')) {
                   reference.inlineFragment<Video>('Video', (fragment) => {
                     fragment
-                      .fields('id', 'duration')
+                      .fields('id', 'fileStatus', 'duration')
                       .object('preview', (preview) => {
                         preview.object('image', (image) => {
                           image.fields('id', 'altText', 'height', 'width', 'url');
@@ -622,7 +622,7 @@ export class MetaobjectRepository<
                 if (!fieldDefinition.validations?.fileTypeOptions) {
                   reference.inlineFragment<GenericFile>('GenericFile', (fragment) => {
                     fragment
-                      .fields('id', 'alt', 'url')
+                      .fields('id', 'fileStatus', 'alt', 'url')
                       .object('preview', (preview) => {
                         preview.object('image', (image) => {
                           image.fields('id', 'altText', 'height', 'width', 'url');

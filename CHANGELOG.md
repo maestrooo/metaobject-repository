@@ -1,3 +1,7 @@
+## 0.12.1
+
+- Add the `fileStatus` field when retrieving a file reference, as this is useful to check if a file has been processed or not.
+
 ## 0.12.0
 
 - [BC] We're removing the `createFormState`, and replace it by a simpler `flattenFields` function that flatten a nested structure. After using it, I've realized that this abstraction is not really correct and it should not be the responsability of this library to work create form state. Instead, it just offers a utility to flatten the fields. For instance:

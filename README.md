@@ -640,10 +640,10 @@ fields it gets. Here is the list of default fields being available when populati
 * Product taxonomy value: 'id', 'name'
 * Variant reference: 'id', 'title', 'displayName', 'sku', 'price', 'compareAtPrice', 'availableForSale', 'inventoryQuantity', 'barcode', 'createdAt',             'updatedAt', 'image'
 * File reference:
-  * If "Image": 'id', 'image.id', 'image.altText', 'image.height', 'image.width', 'image.url'
-  * If "Video": 'id', 'duration', 'sources.format', 'sources.fileSize', 'sources.height', 'sources.width', 'sources.mimeType', 'sources.url',
+  * If "Image": 'id', 'status', 'image.id', 'image.altText', 'image.height', 'image.width', 'image.url'
+  * If "Video": 'id', 'status', 'duration', 'sources.format', 'sources.fileSize', 'sources.height', 'sources.width', 'sources.mimeType', 'sources.url',
     'preview.image.id', 'preview.image.altText', 'preview.image.height', 'preview.image.width', 'preview.image.url'
-  * If "Generic": 'id', 'alt', 'url', 'preview.image.id', 'preview.image.altText', 'preview.image.height', 'preview.image.width', 'preview.image.url'
+  * If "Generic": 'id', 'status', 'alt', 'url', 'preview.image.id', 'preview.image.altText', 'preview.image.height', 'preview.image.width', 'preview.image.url'
 
 > We reserve the right to add more fields if they do not impact performance negatively.
 

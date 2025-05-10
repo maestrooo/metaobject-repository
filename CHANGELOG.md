@@ -1,3 +1,7 @@
+## 0.12.2
+
+- Fixed an incorrect mapping (`MediaImage` instead of `Image`).
+
 ## 0.12.1
 
 - Add the `fileStatus` field when retrieving a file reference, as this is useful to check if a file has been processed or not.

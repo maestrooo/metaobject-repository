@@ -1,7 +1,7 @@
 import { JSONSchema, FromSchema } from "json-schema-to-ts";
 import { 
   MetaobjectCapabilitiesOnlineStore, MetaobjectCapabilitiesPublishable, MetaobjectCapabilitiesRenderable, MetaobjectCapabilitiesTranslatable, 
-  GenericFile, Image, Metaobject, MetaobjectAccessInput, Product, Video, Collection, Customer, Page, ProductVariant, TaxonomyValue, MetaobjectThumbnail,
+  GenericFile, MediaImage, Metaobject, MetaobjectAccessInput, Product, Video, Collection, Customer, Page, ProductVariant, TaxonomyValue, MetaobjectThumbnail,
   Company, MetaobjectCapabilityDataOnlineStore, MetaobjectCapabilityDataPublishable
 } from "~/types/admin.types";
 
@@ -291,7 +291,7 @@ export type PopulatedMap = {
   collection_reference:             Pick<Collection, 'id' | 'handle' | 'title' | 'description' | 'hasProduct' | 'sortOrder' | 'updatedAt' | 'templateSuffix' | 'image'>;
   customer_reference:               Pick<Customer, 'id' | 'displayName' | 'amountSpent' | 'numberOfOrders' | 'email' | 'verifiedEmail' | 'phone' | 'createdAt' | 'updatedAt' | 'locale' | 'image'>;
   company_reference:                Pick<Company, 'id' | 'externalId' | 'name' | 'lifetimeDuration' | 'ordersCount' | 'totalSpent' | 'createdAt' | 'updatedAt'>,
-  file_reference:                   Image; // Fallback to image
+  file_reference:                   MediaImage; // Fallback to image
   metaobject_reference:             Metaobject;
   mixed_reference:                  Metaobject;
   page_reference:                   Pick<Page, 'id' | 'handle' | 'title' | 'body' | 'isPublished' | 'createdAt' | 'updatedAt' | 'templateSuffix'>;
@@ -300,17 +300,17 @@ export type PopulatedMap = {
   variant_reference:                Pick<ProductVariant, 'id' | 'title' | 'displayName' | 'sku' | 'price' | 'compareAtPrice' | 'availableForSale' | 'inventoryQuantity' | 'barcode' | 'createdAt' | 'updatedAt' | 'image'>;
 };
 
-// 2) “fileTypes” → exact mapping (eg.: if we choose Image, only resolve as Image)
+// 2) “fileTypes” → exact mapping (eg.: if we choose Image, only resolve as MediaImage)
 
 type FileMapping<FT extends FileTypeVal> =
   // exactly IMAGE?
-  [FT] extends ["Image"] ? Image :
+  [FT] extends ["Image"] ? MediaImage :
   // exactly VIDEO?
   [FT] extends ["Video"] ? Video :
   // no FT declared → allow all
-  FT extends never ? Image | Video | GenericFile :
+  FT extends never ? MediaImage | Video | GenericFile :
   // multiple → union of image|video
-                     Image | Video;
+                     MediaImage | Video;
 
 /** 
  * If F["required"] is literally `true`, keep T as‐is, 

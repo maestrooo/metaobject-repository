@@ -1,3 +1,7 @@
+## 0.13.3
+
+- Improved typing for all file references to reflect what is being pulled by default.
+
 ## 0.13.2
 
 - Streamline the returned fields for file references, to ensure all types include the preview image.

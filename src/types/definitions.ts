@@ -238,6 +238,11 @@ export type DefinitionByType<L extends DefinitionSchema, T extends L[number]["ty
 
 // 1) Scalar ↔ resource maps
 
+type PickedFile = Pick<File, 'id' | 'fileStatus' | 'alt' | 'preview'>;
+type PickedMediaImage = Pick<MediaImage, 'id' | 'fileStatus' | 'alt' | 'preview' | 'mimeType' | 'originalSource' | 'image'>;
+type PickedVideo = Pick<Video, 'id' | 'fileStatus' | 'alt' | 'preview' | 'duration' | 'sources'>;
+type PickedGenericFile = Pick<GenericFile, 'id' | 'fileStatus' | 'alt' | 'preview' | 'mimeType' | 'url'>;
+
 export type DefaultMap = {
   boolean:                          boolean;
   color:                            string;
@@ -291,7 +296,7 @@ export type PopulatedMap = {
   collection_reference:             Pick<Collection, 'id' | 'handle' | 'title' | 'description' | 'hasProduct' | 'sortOrder' | 'updatedAt' | 'templateSuffix' | 'image'>;
   customer_reference:               Pick<Customer, 'id' | 'displayName' | 'amountSpent' | 'numberOfOrders' | 'email' | 'verifiedEmail' | 'phone' | 'createdAt' | 'updatedAt' | 'locale' | 'image'>;
   company_reference:                Pick<Company, 'id' | 'externalId' | 'name' | 'lifetimeDuration' | 'ordersCount' | 'totalSpent' | 'createdAt' | 'updatedAt'>,
-  file_reference:                   File | MediaImage | Video;
+  file_reference:                   PickedFile | PickedMediaImage | PickedVideo | PickedGenericFile;
   metaobject_reference:             Metaobject;
   mixed_reference:                  Metaobject;
   page_reference:                   Pick<Page, 'id' | 'handle' | 'title' | 'body' | 'isPublished' | 'createdAt' | 'updatedAt' | 'templateSuffix'>;
@@ -304,13 +309,13 @@ export type PopulatedMap = {
 
 type FileMapping<FT extends FileTypeVal> =
   // exactly IMAGE?
-  [FT] extends ["Image"] ? MediaImage :
+  [FT] extends ["Image"] ? PickedMediaImage :
   // exactly VIDEO?
-  [FT] extends ["Video"] ? Video :
+  [FT] extends ["Video"] ? PickedVideo :
   // no FT declared → allow all
-  FT extends never ? MediaImage | Video | GenericFile :
+  FT extends never ? PickedMediaImage | PickedVideo | PickedGenericFile :
   // multiple → union of image|video
-                     MediaImage | Video;
+                     PickedMediaImage | PickedVideo;
 
 /** 
  * If F["required"] is literally `true`, keep T as‐is, 

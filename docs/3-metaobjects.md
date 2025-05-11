@@ -206,20 +206,53 @@ populate: ["host.anotherReference"]
 
 By default, references to metaobjects that you own are fully populated. For other resources (such as products or collections), the library retrieves a list of pre-defined fields, which offer a good balance between API cost and flexibility:
 
-* Product reference: 'id', 'handle', 'title', 'productType', 'status', 'description', 'vendor', 'updatedAt', 'createdAt', 'publishedAt', 'tags','hasOnlyDefaultVariant', 'variantsCount', 'templateSuffix', 'featuredImage'.
-* Collection reference: 'id', 'handle', 'title', 'description', 'hasProduct', 'sortOrder', 'updatedAt', 'templateSuffix', 'image'
-* Customer reference: 'id', 'displayName', 'amountSpent', 'numberOfOrders', 'email', 'verifiedEmail', 'phone', 'createdAt', 'updatedAt', 'locale', 'image'
-* Company reference: 'id', 'externalId', 'name', 'lifetimeDuration', 'ordersCount', 'totalSpent', 'createdAt', 'updatedAt'
-* Metaobject reference / mixed reference (that are not owned by your app): 'id', 'type', 'handle', 'displayName', 'createdAt', 'updatedAt', 'fields'
-* Page reference: 'id', 'handle', 'title', 'body', 'isPublished', 'createdAt', 'updatedAt', 'templateSuffix'
-* Product taxonomy value: 'id', 'name'
-* Variant reference: 'id', 'title', 'displayName', 'sku', 'price', 'compareAtPrice', 'availableForSale', 'inventoryQuantity', 'barcode', 'createdAt', 'updatedAt', 'image'
-* File reference:
-  * For all types: 'id', 'fileStatus', 'alt', 'preview.status', 'preview.image.{id, altText, height, width, url}'.
-  * If "Image", also has: 'mimeType', 'image.{id, altText, height, width, url}', 'originalSource.fileSize'.
-  * If "Video", also has: 'duration', 'sources.{format, fileSize, height, width, mimeType, url}'.
-    'preview.image.id', 'preview.image.altText', 'preview.image.height', 'preview.image.width', 'preview.image.url'
-  * If "Generic", also has: 'mimeType', 'originalFileSize', 'url'.
+- **Product reference**  
+  `id`, `handle`, `title`, `productType`, `status`, `description`, `vendor`,  
+  `updatedAt`, `createdAt`, `publishedAt`, `tags`, `hasOnlyDefaultVariant`,  
+  `variantsCount`, `templateSuffix`, `featuredImage`
+
+- **Collection reference**  
+  `id`, `handle`, `title`, `description`, `hasProduct`, `sortOrder`,  
+  `updatedAt`, `templateSuffix`, `image`
+
+- **Customer reference**  
+  `id`, `displayName`, `amountSpent`, `numberOfOrders`, `email`,  
+  `verifiedEmail`, `phone`, `createdAt`, `updatedAt`, `locale`, `image`
+
+- **Company reference**  
+  `id`, `externalId`, `name`, `lifetimeDuration`, `ordersCount`,  
+  `totalSpent`, `createdAt`, `updatedAt`
+
+- **Metaobject reference** (or mixed reference—not owned by your app)  
+  `id`, `type`, `handle`, `displayName`, `createdAt`, `updatedAt`, `fields`
+
+- **Page reference**  
+  `id`, `handle`, `title`, `body`, `isPublished`, `createdAt`, `updatedAt`,  
+  `templateSuffix`
+
+- **Product taxonomy value**  
+  `id`, `name`
+
+- **Variant reference**  
+  `id`, `title`, `displayName`, `sku`, `price`, `compareAtPrice`,  
+  `availableForSale`, `inventoryQuantity`, `barcode`, `createdAt`,  
+  `updatedAt`, `image`
+
+- **File reference**  
+  - *Common to all file types:*  
+    `id`, `fileStatus`, `alt`,  
+    `preview.status`,  
+    `preview.image.{id, altText, height, width, url}`  
+  - *Image-specific:*  
+    `mimeType`,  
+    `image.{id, altText, height, width, url}`,  
+    `originalSource.fileSize`  
+  - *Video-specific:*  
+    `duration`,  
+    `sources.{format, fileSize, height, width, mimeType, url}`  
+  - *Generic file:*  
+    `mimeType`, `originalFileSize`, `url`
+
 
 For more advanced use-cases, you can use `onPopulate` to fine-tune the GraphQL query for built-in or external references:
 

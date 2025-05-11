@@ -67,12 +67,12 @@ export async function setup(client: any) {
 
 ## 📚 Documentation
 
-- [Typing System](./1-typing.md)
-- [Managing Metaobjects](./2-metaobjects.md)
-- [Managing Definitions](./3-definitions.md)
-- [Metafield Management](./4-metafields.md)
-- [Storefront Tokens](./5-storefront-tokens.md)
-- [Recipes](./6-recipes.md)
+- [Typing System](./docs/1-typing.md)
+- [Managing Metaobjects](./docs/2-metaobjects.md)
+- [Managing Definitions](./docs/3-definitions.md)
+- [Metafield Management](./docs/4-metafields.md)
+- [Storefront Tokens](./docs/5-storefront-tokens.md)
+- [Recipes](./docs/6-recipes.md)
 
 ---
 

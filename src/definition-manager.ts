@@ -1,95 +1,26 @@
-import { GraphQLClient } from "node_modules/@shopify/shopify-app-remix/dist/ts/server/clients/types";
-import { DefinitionSchema, FieldDefinition } from "./types/definitions";
 import { AdminOperations } from "@shopify/admin-api-client";
+import { AdminGraphqlClient } from "@shopify/shopify-app-remix/server";
 import { snake } from "snake-camel";
-import { MetaobjectAccessInput, MetaobjectDefinition, MetaobjectDefinitionCreateInput, MetaobjectDefinitionUpdateInput } from "~/types/admin.types";
+import { DefinitionSchema, FieldDefinition } from "./types/definitions";
+import { MetaobjectAccessInput, MetaobjectDefinitionCreateInput } from "~/types/admin.types";
+import { ClientAware } from "./client-aware";
+import { definitionRepository, DefinitionRepository } from "./definition-repository";
 
 /**
  * Manage the schema definitions
  */
-export class DefinitionManager {
-  private client!: GraphQLClient<AdminOperations>;
+export class DefinitionManager extends ClientAware {
   private definitionIdCache = new Map<string, string>();
 
-  /**
-   * Set the GraphQL client to interact with Shopify API
-   */
-  withClient(client: GraphQLClient<AdminOperations>): this {
-    this.client = client;
-    return this;
+  constructor(private readonly definitionRepository: DefinitionRepository) {
+    super();
   }
 
-  /**
-   * Get the definition by type. If the definition doesn't exist, it throws an exception
-   */
-  async getDefinitionByType(type: string): Promise<Omit<MetaobjectDefinition, 'createdByApp' | 'createdByStaff' | 'metaobjects' | 'standardTemplate'>> {
-    const response = await this.client(
-      `#graphql
-      query GetMetaobjectDefinitionByType($type: String!) {
-        metaobjectDefinitionByType(type: $type) {
-          id
-          type
-          name
-          description
-          createdAt
-          updatedAt
-          displayNameKey
-          hasThumbnailField
-          metaobjectsCount
-          access {
-            admin
-            storefront
-          }
-          capabilities {
-            onlineStore {
-              data {
-                urlHandle
-                canCreateRedirects
-              }
-              enabled
-            }
-            publishable {
-              enabled
-            }
-            translatable {
-              enabled
-            }
-            renderable {
-              data {
-                metaTitleKey
-                metaDescriptionKey
-              }
-              enabled
-            }
-          }
-          fieldDefinitions {
-            description
-            key
-            name
-            required
-            type {
-              category
-              name
-            }
-            validations {
-              name
-              type
-              value
-            }
-          }
-        }
-      }`, {
-        variables: { type }
-      }
-    );
+  withClient(client: AdminGraphqlClient<AdminOperations>): this {
+    super.withClient(client);
+    this.definitionRepository.withClient(client);
 
-    const responseJson = await response.json();
-
-    if (!responseJson.data.metaobjectDefinitionByType) {
-      throw new Error(`Metaobject definition with type "${type}" was not found`);
-    }
-
-    return responseJson.data.metaobjectDefinitionByType;
+    return this;
   }
 
   /**
@@ -124,7 +55,7 @@ export class DefinitionManager {
 
     await Promise.all(
       Object.values(createInputs).map(async (inp) => {
-        const id = await this.getDefinitionId(inp.type);
+        const id = await this.getCachedDefinitionId(inp.type);
 
         if (id) {
           existingIds[inp.type] = id;
@@ -200,7 +131,7 @@ export class DefinitionManager {
           };
 
           // Create and cache the new ID
-          const newId = await this.createDefinition(resolvedInput);
+          const newId = await this.definitionRepository.create(resolvedInput);
           createdIds[type] = newId;
         })
       );
@@ -208,83 +139,11 @@ export class DefinitionManager {
   }
 
   /**
-   * Create a new definition and return the ID of the generated definition. Usually, this method should not be used directly,
-   * as it won't create automatically the dependencies. Instead, use `createFromSchema` to automatically create the definitions
-   * with all their dependencies
+   * Sync local definitions with the Shopify schema. By default, definitions that exist on Shopify but no longer locally are not
+   * deleted to avoid data loss. To delete dangling definitions, set `deleteDanglingDefinitions` to true.
    */
-  async createDefinition(definition: MetaobjectDefinitionCreateInput): Promise<string> {
-    const response = await this.client(
-      `#graphql
-      mutation CreateMetaobjectDefinition($definition: MetaobjectDefinitionCreateInput!) {
-        metaobjectDefinitionCreate(definition: $definition) {
-          metaobjectDefinition {
-            id
-            name
-            type
-          }
-
-          userErrors {
-            field
-            message
-            code
-          }
-        }
-      }`, {
-        variables: { definition }
-      }
-    );
-
-    const responseJson = await response.json();
-
-    const { metaobjectDefinition, userErrors } = responseJson.data.metaobjectDefinitionCreate;
-
-    if (userErrors.length > 0) {
-      console.warn(userErrors);
-      throw new Error(`Cannot create the metaobject definition. Reason: ${userErrors[0].message}`);
-    }
-
-    return metaobjectDefinition.id;
-  }
-
-  /**
-   * Update an existing definition. This is useful when you need to customize a given definition beyond the original schema, or
-   * dynamically change the definition.
-   */
-  async updateDefinition(options: { type: string, definition: MetaobjectDefinitionUpdateInput }): Promise<void> {
-    const id = await this.getDefinitionId(options.type);
-
-    const response = await this.client(
-      `#graphql
-      mutation UpdateMetaobjectDefinition($id: ID!, $definition: MetaobjectDefinitionUpdateInput!) {
-        metaobjectDefinitionUpdate(id: $id, definition: $definition) {
-          metaobjectDefinition {
-            id
-            name
-            type
-          }
-
-          userErrors {
-            field
-            message
-            code
-          }
-        }
-      }`, {
-        variables: { 
-          id,
-          definition: options.definition
-        }
-      }
-    );
-
-    const responseJson = await response.json();
-
-    const { userErrors } = responseJson.data.metaobjectDefinitionUpdate;
-
-    if (userErrors.length > 0) {
-      console.warn(userErrors);
-      throw new Error(`Cannot create the metaobject definition. Reason: ${userErrors[0].message}`);
-    }
+  async syncFromSchema(definitions: DefinitionSchema, opts?: { deleteDanglingDefinitions: boolean }): Promise<void> {
+    throw new Error("Not implemented yet");
   }
 
   /**
@@ -362,24 +221,12 @@ export class DefinitionManager {
   /**
    * Get the metaobject definition ID from the type, or null if it doesn't exist
    */
-  private async getDefinitionId(type: string): Promise<string | null> {
+  private async getCachedDefinitionId(type: string): Promise<string | null> {
     if (this.definitionIdCache.has(type)) {
       return this.definitionIdCache.get(type)!;
     }
 
-    const response = await this.client(
-      `#graphql
-      query GetMetaobjectDefinitionByType($type: String!) {
-        metaobjectDefinitionByType(type: $type) {
-          id
-        }
-      }`, {
-        variables: { type }
-      }
-    );
-
-    const responseJson = await response.json();
-    const id = responseJson.data.metaobjectDefinitionByType?.id ?? null;
+    const id = await this.definitionRepository.findIdByType(type);
 
     // If we have resolved that ID already we cache it
     if (id) {
@@ -390,4 +237,4 @@ export class DefinitionManager {
   }
 }
 
-export const definitionManager = new DefinitionManager();
+export const definitionManager = new DefinitionManager(definitionRepository);

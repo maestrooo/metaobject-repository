@@ -1,10 +1,9 @@
-import { GraphQLClient, GraphQLResponse } from "node_modules/@shopify/shopify-app-remix/dist/ts/server/clients/types";
-import { AdminOperations } from "@shopify/admin-api-client";
-import { FieldBuilder, OperationBuilder, QueryBuilder } from "raku-ql";
+import { FieldBuilder, QueryBuilder } from "raku-ql";
 import { camel } from "snake-camel";
 import { Collection, Company, Customer, GenericFile, Job, MediaImage, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload, Page, PageInfo, Product, ProductVariant, TaxonomyValue, Video } from "~/types/admin.types";
 import { DefinitionSchema, DefinitionSchemaEntry, FieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./types/definitions";
 import { CreateInput, FindOptions, OnPopulateFunc, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "./types/metaobject-repository";
+import { ClientAware } from "./client-aware";
 import { UserErrorsException } from "./exception/user-errors-exception";
 import { deserialize, serializeFields } from "./transformer";
 import { NotFoundException } from "./exception";
@@ -12,20 +11,9 @@ import { NotFoundException } from "./exception";
 /**
  * Object repository
  */
-export class MetaobjectRepository<
-  D extends DefinitionSchema, 
-  T extends D[number]["type"]
-> {
-  private client!: GraphQLClient<AdminOperations>;
-  
-  constructor(private readonly defs: D, public readonly type: T) {}
-
-  /**
-   * Set the GraphQL client to interact with Shopify API
-   */
-  withClient(client: GraphQLClient<AdminOperations>): this {
-    this.client = client;
-    return this;
+export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number]["type"]> extends ClientAware {
+  constructor(private readonly defs: D, public readonly type: T) {
+    super();
   }
 
   /**
@@ -238,6 +226,10 @@ export class MetaobjectRepository<
     input: CreateInput<D, T>[], 
     opts?: PopulateOptions<P>
   ): Promise<FromDefinitionWithSystemData<D, T, P>[]> {
+    if (input.length > 25) {
+      throw new Error('You can only create a maximum of 25 metaobjects at once');
+    }
+
     const definition = this.getDefinitionSchemaEntry(this.type);
 
     const builder = QueryBuilder.mutation('CreateMetaobjects')
@@ -552,7 +544,10 @@ export class MetaobjectRepository<
             case 'customer_reference':
               return reference.inlineFragment<Customer>('Customer', (fragment) => {
                 fragment
-                  .fields('id', 'displayName', 'amountSpent', 'numberOfOrders', 'email', 'verifiedEmail', 'phone', 'locale', 'createdAt', 'updatedAt')
+                  .fields('id', 'displayName', 'numberOfOrders', 'email', 'verifiedEmail', 'phone', 'locale', 'createdAt', 'updatedAt')
+                  .object('amountSpent', (amountSpent) => {
+                    amountSpent.fields('amount', 'currencyCode')
+                  })
                   .object('image', (image => {
                     image.fields('id', 'altText', 'height', 'width', 'url');
                   }))
@@ -560,7 +555,13 @@ export class MetaobjectRepository<
 
             case 'company_reference':
               return reference.inlineFragment<Company>('Company', (fragment) => {
-                fragment.fields('id', 'externalId', 'name', 'lifetimeDuration', 'ordersCount', 'totalSpent', 'createdAt', 'updatedAt')
+                fragment.fields('id', 'externalId', 'name', 'lifetimeDuration', 'createdAt', 'updatedAt')
+                  .object('totalSpent', totalSpent => {
+                    totalSpent.fields('amount', 'currencyCode')
+                  })
+                  .object('ordersCount', ordersCount => {
+                    ordersCount.fields('count', 'precision')
+                  })
               });
 
             case 'metaobject_reference':
@@ -658,14 +659,6 @@ export class MetaobjectRepository<
    * OTHER UTILITIES
    * --------------------------------------------------------------------------------------------------------
    */
-
-  private doRequest(opts: { builder: OperationBuilder, variables?: Record<string, any> }): Promise<GraphQLResponse<string, AdminOperations>> {
-    if (!this.client) {
-      throw new Error('GraphQL client is not set. Call withClient() on the repository before using this method.');
-    }
-
-    return this.client(opts.builder.build(), { variables: opts.variables });
-  }
 
   /**
    * Ensure that a metaobject ID is always using the GID format

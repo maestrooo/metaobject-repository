@@ -2,7 +2,7 @@ import { JSONSchema, FromSchema } from "json-schema-to-ts";
 import { 
   MetaobjectCapabilitiesOnlineStore, MetaobjectCapabilitiesPublishable, MetaobjectCapabilitiesRenderable, MetaobjectCapabilitiesTranslatable, 
   GenericFile, MediaImage, Metaobject, MetaobjectAccessInput, Product, Video, Collection, Customer, Page, ProductVariant, TaxonomyValue, MetaobjectThumbnail,
-  Company, MetaobjectCapabilityDataOnlineStore, MetaobjectCapabilityDataPublishable
+  Company, MetaobjectCapabilityDataOnlineStore, MetaobjectCapabilityDataPublishable, File
 } from "~/types/admin.types";
 
 /**
@@ -291,7 +291,7 @@ export type PopulatedMap = {
   collection_reference:             Pick<Collection, 'id' | 'handle' | 'title' | 'description' | 'hasProduct' | 'sortOrder' | 'updatedAt' | 'templateSuffix' | 'image'>;
   customer_reference:               Pick<Customer, 'id' | 'displayName' | 'amountSpent' | 'numberOfOrders' | 'email' | 'verifiedEmail' | 'phone' | 'createdAt' | 'updatedAt' | 'locale' | 'image'>;
   company_reference:                Pick<Company, 'id' | 'externalId' | 'name' | 'lifetimeDuration' | 'ordersCount' | 'totalSpent' | 'createdAt' | 'updatedAt'>,
-  file_reference:                   MediaImage; // Fallback to image
+  file_reference:                   File | MediaImage | Video;
   metaobject_reference:             Metaobject;
   mixed_reference:                  Metaobject;
   page_reference:                   Pick<Page, 'id' | 'handle' | 'title' | 'body' | 'isPublished' | 'createdAt' | 'updatedAt' | 'templateSuffix'>;

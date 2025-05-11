@@ -1,5 +1,5 @@
 {
-  "files": ["src/index.ts"],
+  "include": ["src/**/*"],
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",

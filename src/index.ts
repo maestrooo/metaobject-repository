@@ -1,4 +1,5 @@
 export { definitionManager, DefinitionManager } from './definition-manager';
+export { definitionRepository, DefinitionRepository} from './definition-repository';
 export { MetaobjectRepository } from './metaobject-repository';
 export { metafieldRepository, MetafieldRepository } from './metafield-repository';
 export { storefrontTokenRepository, StorefrontTokenRepository } from './storefront-token-repository';

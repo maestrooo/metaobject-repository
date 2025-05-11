@@ -1,6 +1,6 @@
 import { FieldBuilder, QueryBuilder } from "raku-ql";
 import { camel } from "snake-camel";
-import { Collection, Company, Customer, GenericFile, Job, MediaImage, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload, Page, PageInfo, Product, ProductVariant, TaxonomyValue, Video } from "~/types/admin.types";
+import { Collection, Company, Customer, File, GenericFile, Job, MediaImage, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload, Page, PageInfo, Product, ProductVariant, TaxonomyValue, Video } from "~/types/admin.types";
 import { DefinitionSchema, DefinitionSchemaEntry, FieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./types/definitions";
 import { CreateInput, FindOptions, OnPopulateFunc, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "./types/metaobject-repository";
 import { ClientAware } from "./client-aware";
@@ -595,10 +595,25 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
 
             case 'file_reference':
               if (fieldDefinition.type === 'file_reference') {
+                reference.inlineFragment<File>('File', (fragment) => {
+                  fragment
+                    .fields('id', 'fileStatus', 'alt')
+                    .object('preview', (preview) => {
+                      preview
+                        .fields('status')
+                        .object('image', (image) => {
+                          image.fields('id', 'altText', 'height', 'width', 'url');
+                        })
+                    })
+                });
+
                 if (fieldDefinition.validations?.fileTypeOptions?.includes('Image')) {
                   reference.inlineFragment<MediaImage>('MediaImage', (fragment) => {
                     fragment
-                      .fields('id', 'fileStatus')
+                      .fields('mimeType')
+                      .object('originalSource', (originalSource) => {
+                        originalSource.fields('fileSize')
+                      })
                       .object('image', (image) => {
                         image.fields('id', 'altText', 'height', 'width', 'url');
                       })
@@ -608,12 +623,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
                 if (fieldDefinition.validations?.fileTypeOptions?.includes('Video')) {
                   reference.inlineFragment<Video>('Video', (fragment) => {
                     fragment
-                      .fields('id', 'fileStatus', 'duration')
-                      .object('preview', (preview) => {
-                        preview.object('image', (image) => {
-                          image.fields('id', 'altText', 'height', 'width', 'url');
-                        })
-                      })
+                      .fields('duration')
                       .object('sources', (sources) => {
                         sources.fields('format', 'fileSize', 'height', 'width', 'mimeType', 'url')
                       })
@@ -622,13 +632,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
 
                 if (!fieldDefinition.validations?.fileTypeOptions) {
                   reference.inlineFragment<GenericFile>('GenericFile', (fragment) => {
-                    fragment
-                      .fields('id', 'fileStatus', 'alt', 'url')
-                      .object('preview', (preview) => {
-                        preview.object('image', (image) => {
-                          image.fields('id', 'altText', 'height', 'width', 'url');
-                        })
-                      })
+                    fragment.fields('mimeType', 'originalFileSize', 'url')
                   });
                 }
               }

@@ -215,10 +215,11 @@ By default, references to metaobjects that you own are fully populated. For othe
 * Product taxonomy value: 'id', 'name'
 * Variant reference: 'id', 'title', 'displayName', 'sku', 'price', 'compareAtPrice', 'availableForSale', 'inventoryQuantity', 'barcode', 'createdAt', 'updatedAt', 'image'
 * File reference:
-  * If "Image": 'id', 'status', 'image.id', 'image.altText', 'image.height', 'image.width', 'image.url'
-  * If "Video": 'id', 'status', 'duration', 'sources.format', 'sources.fileSize', 'sources.height', 'sources.width', 'sources.mimeType', 'sources.url',
+  * For all types: 'id', 'fileStatus', 'alt', 'preview.status', 'preview.image.{id, altText, height, width, url}'.
+  * If "Image", also has: 'mimeType', 'image.{id, altText, height, width, url}', 'originalSource.fileSize'.
+  * If "Video", also has: 'duration', 'sources.{format, fileSize, height, width, mimeType, url}'.
     'preview.image.id', 'preview.image.altText', 'preview.image.height', 'preview.image.width', 'preview.image.url'
-  * If "Generic": 'id', 'status', 'alt', 'url', 'preview.image.id', 'preview.image.altText', 'preview.image.height', 'preview.image.width', 'preview.image.url'
+  * If "Generic", also has: 'mimeType', 'originalFileSize', 'url'.
 
 For more advanced use-cases, you can use `onPopulate` to fine-tune the GraphQL query for built-in or external references:
 

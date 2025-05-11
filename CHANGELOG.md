@@ -1,3 +1,7 @@
+## 0.13.2
+
+- Streamline the returned fields for file references, to ensure all types include the preview image.
+
 ## 0.13.1
 
 - Add a new `getAppMetafields` to get multiple app-owned metafields in one call.

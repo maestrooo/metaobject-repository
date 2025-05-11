@@ -31,6 +31,14 @@ const metafield = await metafieldRepository.getAppMetafield({
 });
 ```
 
+## Getting multiple app metafields
+
+Use `getAppMetafields` to get multiple app-owned metafields:
+
+```ts
+const { items, pageInfo } = await metafieldRepository.getAppMetafields({ first: 50, namespace: 'settings' });
+```
+
 ---
 
 ## Getting multiple metafields for a resource

@@ -30,6 +30,39 @@ export class MetafieldRepository extends ClientAware {
   }
 
   /**
+   * Get one or more app metafields
+   */
+  async getAppMetafields(opts: FindOptions): Promise<{ pageInfo: PageInfo, items: PickedMetafield | null }> {
+    const variables = {
+      owner: opts.owner,
+      first: ('after' in opts) ? (opts.first || 50) : undefined,
+      last: ('before' in opts) ? (opts.last || 50) : undefined,
+      after: opts.after,
+      before: opts.before,
+      namespace: opts.namespace,
+      reverse: opts.reverse,
+    }
+
+    if (!variables.first && !variables.last) {
+      variables.first = 50; // Provide a default value for first
+    }
+
+    const builder = QueryBuilder.query('GetAppMetafields')
+      .variables({ keys: '[String!]', namespace: 'String', first: 'Int', after: 'String', last: 'Int', before: 'String', reverse: 'Boolean' })
+      .operation<AppInstallation>('currentAppInstallation', currentAppInstallation => {
+        currentAppInstallation.connection('metafields', { keys: '$keys', namespace: '$namespace', first: '$first', after: '$after', last: '$last', before: '$before', reverse: '$reverse' }, metafieldsConnection => {
+          metafieldsConnection.nodes(node => {
+            node.fields('id', 'compareDigest', 'type', 'namespace', 'key', 'jsonValue');
+          })
+        })
+      })
+
+    const { nodes: items, pageInfo } = (await ((await this.doRequest({ builder, variables })).json())).data.currentAppInstallation.metafields;
+
+    return { pageInfo, items };
+  }
+
+  /**
    * Get one or more metafields
    */
   async getMetafields(opts: FindOptions): Promise<{ pageInfo: PageInfo, items: PickedMetafield | null }> {

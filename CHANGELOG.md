@@ -1,9 +1,9 @@
-## 1.0.0
+## 0.13.0
 
 - [BC] The `definitionManager` has been splitted into two classes: the `DefinitionRepository` that allows to find, update or create definition, and the `DefinitionManager`, which is a higher level abstraction that create automatically all definitions from a schema. In the future, we plan to add more utilities such as `syncFromSchema`, so this allows to better split the concerns. Method names have also been updated to `findByType`, `findByTypeOrFail`, `create` and `update`, to align with the metaobject repository methods.
 - [BC] The `getExistingTokens` on the storefront token repository has been renamed to `findExistingTokens` to better align with other naming.
 
-- After a lot of breaking changes, I feel the library is now stable enough. The documentation has been updated to reflect all the changes.
+- After a lot of breaking changes, I feel the library is now stable enough. I plan to tag a version 1.0.0 in the coming weeks.
 
 ## 0.12.2
 

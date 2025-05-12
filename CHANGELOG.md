@@ -1,3 +1,7 @@
+## 0.13.4
+
+- Fixed an issue where list of file references were not properly populated.
+
 ## 0.13.3
 
 - Improved typing for all file references to reflect what is being pulled by default.

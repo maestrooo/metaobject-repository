@@ -239,9 +239,9 @@ export type DefinitionByType<L extends DefinitionSchema, T extends L[number]["ty
 // 1) Scalar ↔ resource maps
 
 type PickedFile = Pick<File, 'id' | 'fileStatus' | 'alt' | 'preview'>;
-type PickedMediaImage = Pick<MediaImage, 'id' | 'fileStatus' | 'alt' | 'preview' | 'mimeType' | 'originalSource' | 'image'>;
-type PickedVideo = Pick<Video, 'id' | 'fileStatus' | 'alt' | 'preview' | 'duration' | 'sources'>;
-type PickedGenericFile = Pick<GenericFile, 'id' | 'fileStatus' | 'alt' | 'preview' | 'mimeType' | 'url'>;
+type PickedMediaImage = Pick<MediaImage, '__typename' | 'id' | 'fileStatus' | 'alt' | 'preview' | 'mimeType' | 'originalSource' | 'image'>;
+type PickedVideo = Pick<Video, '__typename' | 'id' | 'fileStatus' | 'alt' | 'preview' | 'duration' | 'sources'>;
+type PickedGenericFile = Pick<GenericFile, '__typename' | 'id' | 'fileStatus' | 'alt' | 'preview' | 'mimeType' | 'url'>;
 
 export type DefaultMap = {
   boolean:                          boolean;

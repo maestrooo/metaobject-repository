@@ -78,9 +78,9 @@ export async function setup(client: any) {
 
 ## Roadmap
 
-* Adding a translation repository to make it easier to translate metaobjects.
 * Adding a `bulkUpsert` method to upsert a high number of objects using a long standing job.
 * Adding an `export` method to the repository to export up to 250 metaobjects.
 * Adding a `bulkExport` method to export any number of metaobjects, using the bulk API.
 * Adding a `syncFromSchema` method on the definition manager to sync definitions.
 * Find a way to add a `useDirectAccess` method. Right now, it seems that due to some exports done in the repository, this does not work.
+* Adding a translation repository to make it easier to translate metaobjects.

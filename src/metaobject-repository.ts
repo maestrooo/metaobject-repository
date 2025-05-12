@@ -495,7 +495,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
     fieldBuilder.object({ field: `_${camel(fieldDefinition.key)}` }, { key: fieldDefinition.key }, (field) => {
       const baseResourceName = fieldDefinition.type.replace('list.', '');
 
-      const setupReference = (reference: FieldBuilder) => {
+      const setupReference = (reference: FieldBuilder): FieldBuilder => {
         if ((fieldDefinition.type === 'metaobject_reference' || fieldDefinition.type === 'list.metaobject_reference') && fieldDefinition.metaobjectType) {
           return reference.inlineFragment<Metaobject>('Metaobject', (fragment) => {
             this.setupMetaobjectQuery(this.getDefinitionSchemaEntry(fieldDefinition.metaobjectType!), fragment, populate, onPopulate);
@@ -503,11 +503,13 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
         }
 
         if ((fieldDefinition.type === 'mixed_reference' || fieldDefinition.type === 'list.mixed_reference') && fieldDefinition.metaobjectTypes) {
-          return fieldDefinition.metaobjectTypes?.forEach((metaobjectType) => {
+          fieldDefinition.metaobjectTypes?.forEach((metaobjectType) => {
             reference.inlineFragment<Metaobject>('Metaobject', (fragment) => {
               this.setupMetaobjectQuery(this.getDefinitionSchemaEntry(metaobjectType), fragment, populate, onPopulate);
             })
           });
+
+          return reference;
         }
 
         // We first call the onPopulate method to let author populate their own fields
@@ -594,7 +596,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
               });
 
             case 'file_reference':
-              if (fieldDefinition.type === 'file_reference') {
+              if (fieldDefinition.type === 'file_reference' || fieldDefinition.type === 'list.file_reference') {
                 reference.inlineFragment<File>('File', (fragment) => {
                   fragment
                     .fields('id', 'fileStatus', 'alt')
@@ -610,7 +612,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
                 if (fieldDefinition.validations?.fileTypeOptions?.includes('Image')) {
                   reference.inlineFragment<MediaImage>('MediaImage', (fragment) => {
                     fragment
-                      .fields('mimeType')
+                      .fields('__typename', 'mimeType')
                       .object('originalSource', (originalSource) => {
                         originalSource.fields('fileSize')
                       })
@@ -623,7 +625,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
                 if (fieldDefinition.validations?.fileTypeOptions?.includes('Video')) {
                   reference.inlineFragment<Video>('Video', (fragment) => {
                     fragment
-                      .fields('duration')
+                      .fields('__typename', 'duration')
                       .object('sources', (sources) => {
                         sources.fields('format', 'fileSize', 'height', 'width', 'mimeType', 'url')
                       })
@@ -632,19 +634,21 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
 
                 if (!fieldDefinition.validations?.fileTypeOptions) {
                   reference.inlineFragment<GenericFile>('GenericFile', (fragment) => {
-                    fragment.fields('mimeType', 'originalFileSize', 'url')
+                    fragment.fields('__typename', 'mimeType', 'originalFileSize', 'url')
                   });
                 }
               }
 
-              return;
+              return reference;
           }
         }
+
+        return reference;
       }
 
       if (fieldDefinition.type.startsWith('list.')) {
         field.connection('references', { first: 50 }, (connection) => {
-          connection.object('nodes', (nodes) => {
+          connection.nodes(nodes => {
             nodes.fields('__typename');
             setupReference(nodes);
           });

@@ -6,6 +6,11 @@ import { MetaobjectAccessInput, MetaobjectDefinitionCreateInput } from "~/types/
 import { ClientAware } from "./client-aware";
 import { definitionRepository, DefinitionRepository } from "./definition-repository";
 
+type SyncFromSchemaOptions = {
+  deleteDanglingDefinitions: boolean;
+  deleteDanglingFields: boolean;
+}
+
 /**
  * Manage the schema definitions
  */
@@ -142,7 +147,7 @@ export class DefinitionManager extends ClientAware {
    * Sync local definitions with the Shopify schema. By default, definitions that exist on Shopify but no longer locally are not
    * deleted to avoid data loss. To delete dangling definitions, set `deleteDanglingDefinitions` to true.
    */
-  async syncFromSchema(definitions: DefinitionSchema, opts?: { deleteDanglingDefinitions: boolean }): Promise<void> {
+  async syncFromSchema(definitions: DefinitionSchema, opts?: SyncFromSchemaOptions): Promise<void> {
     throw new Error("Not implemented yet");
   }
 

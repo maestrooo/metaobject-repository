@@ -96,7 +96,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
     const metaobject = await this.findByHandle(handle, opts);
 
     if (!metaobject) {
-      throw new NotFoundException(`Metaobject with ID ${handle} not found`);
+      throw new NotFoundException(`Metaobject with handle ${handle} not found`);
     }
 
     return metaobject;
@@ -445,7 +445,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
       })
     }
 
-    // We only include the thumbnail field if the schema contains one reference
+    // We only include the thumbnail field if the schema contains one file reference or one color field
     const hasThumbnailField = schema.fields.some(field => field.type.includes('file_reference') || field.type.includes('color'));
 
     if (hasThumbnailField) {

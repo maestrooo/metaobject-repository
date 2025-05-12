@@ -36,6 +36,22 @@ into:
 
 ---
 
+## 🔁 Optimizing updates
+
+For large metaobjects, updating only the fields that have changed can be beneficial for performance. To make this easier, you can use the `fieldsDifference`, which accept two objects (the original object and the new object), and return a new object containing only the fields that have changed.
+
+```ts
+import { fieldsDifference } from "metaobject-repository";
+
+const defaultValues = { title: 'Foo', author: 'John' };
+const newState = { title: 'Foo', author: 'Mark' };
+const difference = fieldsDifference(defaultValues, newState);
+
+// { author: 'Mark' }
+```
+
+---
+
 ## 🔍 Extracting query parameters
 
 When using `find()` to paginate/search metaobjects from URL query params, use the `extractFindParams` utility:

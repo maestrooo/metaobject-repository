@@ -1,3 +1,7 @@
+## 0.14.0
+
+- Added a new `fieldsDifference` to calculate the difference between two set of fields. This is useful to perform optimized metaobject updates.
+
 ## 0.13.4
 
 - Fixed an issue where list of file references were not properly populated.

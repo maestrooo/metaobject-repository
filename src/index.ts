@@ -10,4 +10,5 @@ export type { FieldDefinition, DefinitionSchemaEntry, DefinitionSchema } from '.
 export type { InferObjectType, OnPopulateFunc } from './types/metaobject-repository';
 
 export { flattenFields } from './utils/flatten';
+export { fieldsDifference } from './utils/difference';
 export { extractFindParams } from './utils/params';

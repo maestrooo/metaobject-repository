@@ -1,9 +1,8 @@
-import { AppInstallation, Metafield, MetafieldConnection, MetafieldIdentifierInput, MetafieldsDeletePayload, MetafieldsSetInput, MetafieldsSetPayload, PageInfo } from "~/types/admin.types";
-import { FindOptions } from "./types/metafield-repository";
+import { AppInstallation, HasMetafields, MetafieldConnection, MetafieldIdentifierInput, MetafieldsDeletePayload, MetafieldsSetInput, MetafieldsSetPayload } from "~/types/admin.types";
+import { FindOptions, PaginatedMetafields, PickedMetafield } from "./types/metafield-repository";
 import { ClientAware } from "./client-aware";
 import { QueryBuilder } from "raku-ql";
 
-type PickedMetafield = Pick<Metafield, 'id' | 'compareDigest' | 'type' | 'namespace' | 'key' | 'jsonValue'>;
 type MakeOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 /**
@@ -32,7 +31,7 @@ export class MetafieldRepository extends ClientAware {
   /**
    * Get one or more app metafields
    */
-  async getAppMetafields(opts: FindOptions): Promise<{ pageInfo: PageInfo, items: PickedMetafield | null }> {
+  async getAppMetafields(opts: FindOptions): Promise<PaginatedMetafields> {
     const variables = {
       owner: opts.owner,
       first: ('after' in opts) ? (opts.first || 50) : undefined,
@@ -63,9 +62,32 @@ export class MetafieldRepository extends ClientAware {
   }
 
   /**
+   * Get a single metafield
+   */
+  async getMetafield(opts: { owner: string, namespace: string, key: string }): Promise<PickedMetafield | null> {
+    // Shopify currently does not have any kind of "find one" operation for metafield, so we parse the owner ID and perform an
+    // optimized query to get the metafield
+    const resourceType = opts.owner.split('/')[3]; // gid have the shape gid://shopify/ResourceType/123456789
+    const operationName = resourceType[0].toLowerCase() + resourceType.slice(1); // convert thing like "Product" to "product"
+
+    const builder = QueryBuilder.query('GetMetafield')
+      .variables({ id: 'ID!', namespace: 'String!', key: 'String!' })
+      .operation<HasMetafields>(operationName, hasMetafield => {
+        hasMetafield.object('metafield', { namespace: '$namespace', key: '$key' }, metafield => {
+          metafield.fields('id', 'compareDigest', 'type', 'namespace', 'key', 'jsonValue');
+        })
+      });
+
+    const variables = { id: opts.owner, namespace: opts.namespace, key: opts.key };
+    const { metafield } = (await ((await this.doRequest({ builder, variables })).json())).data[operationName];
+
+    return metafield;
+  }
+
+  /**
    * Get one or more metafields
    */
-  async getMetafields(opts: FindOptions): Promise<{ pageInfo: PageInfo, items: PickedMetafield | null }> {
+  async getMetafields(opts: FindOptions): Promise<PaginatedMetafields> {
     const variables = {
       owner: opts.owner,
       first: ('after' in opts) ? (opts.first || 50) : undefined,

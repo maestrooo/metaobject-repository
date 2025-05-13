@@ -41,6 +41,23 @@ const { items, pageInfo } = await metafieldRepository.getAppMetafields({ first: 
 
 ---
 
+## Getting a resource metafield
+
+Use `getMetafield` with an `ownerId`, `namespace` and `key`. Under the hood, an optimized request on the resource type
+will be performed:
+
+```ts
+const metafield = await metafieldRepository.getMetafield({
+  ownerId: "gid://shopify/Product/123",
+  key: "foo",
+  namespace: "bar"
+});
+```
+
+> To get an app-owned metafield, use the `getAppMetafield` instead.
+
+---
+
 ## Getting multiple metafields for a resource
 
 Use `getMetafields()` and specify the `ownerId`, which is a GID to the target resource (e.g. product, customer).
@@ -48,9 +65,12 @@ Use `getMetafields()` and specify the `ownerId`, which is a GID to the target re
 ```ts
 const { items, pageInfo } = await metafieldRepository.getMetafields({
   owner: "gid://shopify/Product/123",
+  namespace: "foo", // optional
   first: 50
 });
 ```
+
+> To get app-owned metafields, use the `getAppMetafields` instead.
 
 ---
 

@@ -1,3 +1,8 @@
+## 0.15.0
+
+- Added a new `getMetafield` method to get a single metafield of a given resource.
+- Fixed an incorrect typing for `getAppMetafields` and `getMetafields`.
+
 ## 0.14.0
 
 - Added a new `fieldsDifference` to calculate the difference between two set of fields. This is useful to perform optimized metaobject updates.

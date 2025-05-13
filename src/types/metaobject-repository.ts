@@ -7,7 +7,7 @@
 import { JSONSchema, FromSchema } from "json-schema-to-ts";
 import { FieldBuilder } from "raku-ql";
 import { CamelCase, CamelCaseKeys, DefaultMap, DefinitionByType, DefinitionSchema, FieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./definitions";
-import { MetaobjectCapabilityDataOnlineStoreInput, MetaobjectCapabilityDataPublishableInput } from "./admin.types";
+import { MetaobjectCapabilityDataOnlineStoreInput, MetaobjectCapabilityDataPublishableInput, PageInfo } from "./admin.types";
 import { MetaobjectRepository } from "~/metaobject-repository";
 
 /**
@@ -138,6 +138,11 @@ type BackwardFindOptions = CommonFindOptions & {
 
 // Union forces “at least one of first|last” and applies the mutual-exclusion rules
 export type FindOptions = ForwardFindOptions | BackwardFindOptions;
+
+export type PaginatedMetaobjects<D extends DefinitionSchema, T extends D[number]["type"], P extends ValidPopulatePaths<D, T> = never> = {
+  pageInfo: PageInfo, 
+  items: FromDefinitionWithSystemData<D, T, P>[] 
+}
 
 /**
  * --------------------------------------------------------------------------------------------

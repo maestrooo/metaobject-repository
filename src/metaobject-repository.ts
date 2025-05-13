@@ -1,8 +1,8 @@
 import { FieldBuilder, QueryBuilder } from "raku-ql";
 import { camel } from "snake-camel";
-import { Collection, Company, Customer, File, GenericFile, Job, MediaImage, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload, Page, PageInfo, Product, ProductVariant, TaxonomyValue, Video } from "~/types/admin.types";
+import { Collection, Company, Customer, File, GenericFile, Job, MediaImage, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload, Page, Product, ProductVariant, TaxonomyValue, Video } from "~/types/admin.types";
 import { DefinitionSchema, DefinitionSchemaEntry, FieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./types/definitions";
-import { CreateInput, FindOptions, OnPopulateFunc, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "./types/metaobject-repository";
+import { CreateInput, FindOptions, OnPopulateFunc, PaginatedMetaobjects, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "./types/metaobject-repository";
 import { ClientAware } from "./client-aware";
 import { UserErrorsException } from "./exception/user-errors-exception";
 import { deserialize, serializeFields } from "./transformer";
@@ -134,9 +134,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
   /**
    * Return a list of paginated metaobjects
    */
-  async find<P extends ValidPopulatePaths<D, T> = never>(
-    opts: FindOptions & PopulateOptions<P>
-  ): Promise<{ pageInfo: PageInfo, items: FromDefinitionWithSystemData<D, T, P>[] }> {
+  async find<P extends ValidPopulatePaths<D, T> = never>(opts: FindOptions & PopulateOptions<P>): Promise<PaginatedMetaobjects<D, T, P>> {
     const connectionParameters = {
       type: this.type,
       first: ('after' in opts) ? (opts.first || 50) : undefined,

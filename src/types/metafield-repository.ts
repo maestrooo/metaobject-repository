@@ -1,3 +1,7 @@
+import { Metafield, PageInfo } from "./admin.types";
+
+export type PickedMetafield = Pick<Metafield, 'id' | 'compareDigest' | 'type' | 'namespace' | 'key' | 'jsonValue'>;
+
 type CommonFindOptions = {
   owner: string;
   namespace?: string;
@@ -28,3 +32,8 @@ type BackwardFindOptions = CommonFindOptions & {
 
 // Union forces “at least one of first|last” and applies the mutual-exclusion rules
 export type FindOptions = ForwardFindOptions | BackwardFindOptions;
+
+export type PaginatedMetafields = {
+  pageInfo: PageInfo, 
+  items: PickedMetafield[]
+}

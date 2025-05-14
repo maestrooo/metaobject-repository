@@ -10,6 +10,7 @@ export default {
       apiVersion: 'unstable',
       documents: ['query GetMetaobject($id: ID!) { metaobject(id: $id) { id } }'],
       outputDir: './src/types',
+      declarations: false
     }),
   },
 };

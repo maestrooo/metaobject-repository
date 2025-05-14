@@ -1,6 +1,6 @@
 # Metaobject Repository Documentation
 
-Welcome to the documentation for **Metaobject Repository**, a fully-typed abstraction layer for working with [Shopify metaobjects](https://shopify.dev/docs/custom-data/metaobjects). The library helps you managing definitions, metaobjects, metafields and storefront access tokens.
+Welcome to the documentation for **Metaobject Repository**, a fully-typed abstraction layer for working with [Shopify metaobjects](https://shopify.dev/docs/custom-data/metaobjects). The library helps you managing definitions (both metaobjects and metafields), metaobjects, metafields and storefront access tokens.
 
 ---
 
@@ -18,14 +18,14 @@ A minimal example to define a schema, create a metaobject, and delete it.
 
 ```ts
 // definitions.ts
-import { DefinitionSchema, MetaobjectRepository } from "metaobject-repository";
+import { MetaobjectDefinitionSchema, MetaobjectRepository } from "metaobject-repository";
 
 export const definitions = [
   {
     type: "$app:event",
     name: "Event",
     displayNameKey: "label",
-    access: { storefront: "NONE" },
+    access: { storefront: "PUBLIC_READ" },
     capabilities: {
       translatable: { enabled: true },
       publishable: { enabled: true }
@@ -35,7 +35,7 @@ export const definitions = [
       { name: "Banner", key: "banner", type: "file_reference", validations: { fileTypes: ["Image"] } }
     ]
   }
-] as const satisfies DefinitionSchema;
+] as const satisfies MetaobjectDefinitionSchema;
 
 export const eventRepository = new MetaobjectRepository(definitions, "$app:event");
 ```
@@ -68,9 +68,10 @@ export async function setup(client: any) {
 ## 📚 Documentation
 
 - [Typing system](./docs/1-typing.md)
-- [Managing definitions](./docs/2-definitions.md)
+- [Managing metaobject definitions](./docs/2-metaobject-definitions.md)
 - [Managing metaobjects](./docs/3-metaobjects.md)
-- [Metafield management](./docs/4-metafields.md)
+- [Managing metafield definitions](./docs/4-metafield-definitions.md)
+- [Managing metafields](./docs/4-metafields.md)
 - [Storefront tokens](./docs/5-storefront-tokens.md)
 - [Recipes](./docs/6-recipes.md)
 

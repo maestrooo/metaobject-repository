@@ -6,9 +6,11 @@
 
 import { JSONSchema, FromSchema } from "json-schema-to-ts";
 import { FieldBuilder } from "raku-ql";
-import { CamelCase, CamelCaseKeys, DefaultMap, DefinitionByType, DefinitionSchema, FieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./definitions";
-import { MetaobjectCapabilityDataOnlineStoreInput, MetaobjectCapabilityDataPublishableInput, PageInfo } from "./admin.types";
-import { MetaobjectRepository } from "~/metaobject-repository";
+import { MetaobjectCapabilityDataInput, PageInfo } from "./admin.types";
+import { MetaobjectDefinitionByType, DefinitionCapabilities, MetaobjectDefinitionSchema, MetaobjectFieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./metaobject-definitions";
+import { DefaultMap } from "./fields";
+import { MetaobjectRepository } from "~/metaobjects/metaobject-repository";
+import { CamelCase, CamelCaseKeys } from "./utils";
 
 /**
  * --------------------------------------------------------------------------------------------
@@ -16,40 +18,36 @@ import { MetaobjectRepository } from "~/metaobject-repository";
  * --------------------------------------------------------------------------------------------
  */
 
-// Create‐time input for each capability
-type MetaobjectDefinitionCapabilityInputMap = {
-  onlineStore: MetaobjectCapabilityDataOnlineStoreInput;
-  publishable: MetaobjectCapabilityDataPublishableInput;
-}
+type DefinitionEnabledCapabilityKeys<D extends MetaobjectDefinitionSchema, T extends D[number]["type"]> = {
+  [K in keyof DefinitionCapabilities<D, T>]:
+    DefinitionCapabilities<D, T>[K] extends { enabled: true } ? K : never
+}[keyof DefinitionCapabilities<D, T>];
 
-type DefinitionCapabilityKeys<D extends DefinitionSchema, T extends D[number]["type"]> =
-  DefinitionByType<D, T> extends { capabilities: infer C } ? keyof C : never;
+type FieldDef<D extends MetaobjectDefinitionSchema, T extends D[number]["type"]> = MetaobjectDefinitionByType<D, T>["fields"][number];
 
-type FieldDef<D extends DefinitionSchema, T extends D[number]["type"]> = DefinitionByType<D, T>["fields"][number];
-
-type FieldDefByKey<D extends DefinitionSchema, T extends D[number]["type"], P extends string> = Extract<
-  DefinitionByType<D, T>["fields"][number],
+type FieldDefByKey<D extends MetaobjectDefinitionSchema, T extends D[number]["type"], P extends string> = Extract<
+  MetaobjectDefinitionByType<D, T>["fields"][number],
   { key: P }
 >;
 
-type JsonFieldInput<D extends DefinitionSchema, T extends D[number]["type"], P extends string> =
+type JsonFieldInput<D extends MetaobjectDefinitionSchema, T extends D[number]["type"], P extends string> =
   FieldDefByKey<D, T, P> extends { validations: { schema: infer S extends JSONSchema } }
     ? CamelCaseKeys<FromSchema<S>>
     : object;
 
-type RequiredKeys<D extends DefinitionSchema, T extends D[number]["type"]> =
+type RequiredKeys<D extends MetaobjectDefinitionSchema, T extends D[number]["type"]> =
   Extract<FieldDef<D, T>, { required: true }>["key"];
 
-type OptionalKeys<D extends DefinitionSchema, T extends D[number]["type"]> =
+type OptionalKeys<D extends MetaobjectDefinitionSchema, T extends D[number]["type"]> =
   Exclude<FieldDef<D, T>["key"], RequiredKeys<D, T>>;
 
-type FieldTypeOf<D extends DefinitionSchema, T extends D[number]["type"], P extends string> =
+type FieldTypeOf<D extends MetaobjectDefinitionSchema, T extends D[number]["type"], P extends string> =
   Extract<
-    DefinitionByType<D, T>["fields"][number],
+    MetaobjectDefinitionByType<D, T>["fields"][number],
     { key: P }
   >["type"];
 
-export type FieldsInput<D extends DefinitionSchema, T extends D[number]["type"]> = {
+export type FieldsInput<D extends MetaobjectDefinitionSchema, T extends D[number]["type"]> = {
   // required fields
   [P in RequiredKeys<D, T> as CamelCase<P>]:
     FieldTypeOf<D, T, P> extends "json"
@@ -68,17 +66,17 @@ export type FieldsInput<D extends DefinitionSchema, T extends D[number]["type"]>
 };
 
 // Build capabilities‐input for only those defined
-type CapabilitiesInput<D extends DefinitionSchema, T extends D[number]["type"]> = Partial<{
-  [C in DefinitionCapabilityKeys<D, T> & keyof MetaobjectDefinitionCapabilityInputMap]: MetaobjectDefinitionCapabilityInputMap[C];
+type CapabilitiesInput<D extends MetaobjectDefinitionSchema, T extends D[number]["type"]> = Partial<{
+  [C in DefinitionEnabledCapabilityKeys<D, T> & keyof MetaobjectCapabilityDataInput]: MetaobjectCapabilityDataInput[C];
 }>
 
-export type CreateInput<D extends DefinitionSchema, T extends D[number]["type"]> = {
+export type CreateInput<D extends MetaobjectDefinitionSchema, T extends D[number]["type"]> = {
   handle?: string;
   capabilities?: CapabilitiesInput<D, T>;
   fields: FieldsInput<D, T>;
 }
 
-export type UpdateInput<D extends DefinitionSchema, T extends D[number]["type"]> = {
+export type UpdateInput<D extends MetaobjectDefinitionSchema, T extends D[number]["type"]> = {
   id: string;
   handle?: string;
   redirectNewHandle?: boolean;
@@ -86,7 +84,7 @@ export type UpdateInput<D extends DefinitionSchema, T extends D[number]["type"]>
   fields: Partial<FieldsInput<D, T>>; // When updating everything is partial
 }
 
-export type UpsertInput<D extends DefinitionSchema, T extends D[number]["type"]> = {
+export type UpsertInput<D extends MetaobjectDefinitionSchema, T extends D[number]["type"]> = {
   handle?: string;
   capabilities?: CapabilitiesInput<D, T>;
   fields: Partial<FieldsInput<D, T>>; // When upserting everything is partial
@@ -98,7 +96,7 @@ export type UpsertInput<D extends DefinitionSchema, T extends D[number]["type"]>
  * --------------------------------------------------------------------------------------------
  */
 
-export type OnPopulateFunc = (fieldDefinition: FieldDefinition, fieldBuilder: FieldBuilder) => void;
+export type OnPopulateFunc = (fieldDefinition: MetaobjectFieldDefinition, fieldBuilder: FieldBuilder) => void;
 
 export type PopulateOptions<P> = {
   populate?: readonly P[];
@@ -139,7 +137,7 @@ type BackwardFindOptions = CommonFindOptions & {
 // Union forces “at least one of first|last” and applies the mutual-exclusion rules
 export type FindOptions = ForwardFindOptions | BackwardFindOptions;
 
-export type PaginatedMetaobjects<D extends DefinitionSchema, T extends D[number]["type"], P extends ValidPopulatePaths<D, T> = never> = {
+export type PaginatedMetaobjects<D extends MetaobjectDefinitionSchema, T extends D[number]["type"], P extends ValidPopulatePaths<D, T> = never> = {
   pageInfo: PageInfo, 
   items: FromDefinitionWithSystemData<D, T, P>[] 
 }
@@ -165,7 +163,7 @@ export type InferObjectType<A, B = never, C extends any[] = []> =
   // ————————————————————————————————————————————————————————————————————————
   // 2) otherwise if A is a raw DefinitionSchema, 
   //    B is the object-type string, C is the populate-paths array:
-  : A extends DefinitionSchema
+  : A extends MetaobjectDefinitionSchema
     ? B extends A[number]['type']
       ? C extends ValidPopulatePaths<A, B>[]
         ? FromDefinitionWithSystemData<A, B, C[number]>

@@ -1,3 +1,17 @@
+## 0.16.0
+
+- Added a new `metafieldDefinitionManager`. Similar to the `metaobjectDefinitionManager`, it allows to create metafield definitions automatically.
+- Added a new `deleteDefinition` on the `metaobjectDefinitionManager`.
+- The `createDefinition` method on the manager will now throw a `DefinitionTakenException` if the definition already exists, allowing to more easily categorize errors.
+- [BC] The export of the metafield repository has been renamed from `metafieldRepository` to `defaultMetafieldRepository`. This change was done to allow you to create a custom repository that is definition aware.
+- [BC] Rename the `definitionManager`, `DefinitionManager` and `DefinitionRepository` to `metaobjectDefinitionManager`, `MetaobjectDefinitionManager` and `MetaobjectDefinitionRepository`, respectively.
+- [BC] Rename the `DefinitionSchema` type to `MetaobjectDefinitionSchema`.
+- [BC] I'm reverting the changes done in 0.13.0 and merge back again all methods from the metaobject definition repository back to the metaobject definition manager. Splitting into two made the usage more confusing than needed.
+
+## 0.15.1
+
+- Remove the `createdAt` from metaobjects and metaobject definitions. This field is currently only available in the `unstable` API version. To allow merchants using the library, it has been removed. It will be re-added once we version this library.
+
 ## 0.15.0
 
 - Added a new `getMetafield` method to get a single metafield of a given resource.

@@ -1,5 +1,5 @@
-import { Shop, StorefrontAccessToken, StorefrontAccessTokenCreatePayload, StorefrontAccessTokenDeletePayload } from "./types/admin.types";
-import { ClientAware } from "./client-aware";
+import { Shop, StorefrontAccessToken, StorefrontAccessTokenCreatePayload, StorefrontAccessTokenDeletePayload } from "../types/admin.types";
+import { ClientAware } from "../client-aware";
 import { QueryBuilder } from "raku-ql";
 
 type PickedStorefrontAccessToken = Pick<StorefrontAccessToken, 'id' | 'accessToken' | 'title'>;

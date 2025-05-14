@@ -1,6 +1,10 @@
+import { FieldBuilder } from "raku-ql";
 import { Metafield, PageInfo } from "./admin.types";
+import { MetafieldDefinition } from "./metafield-definitions";
 
 export type PickedMetafield = Pick<Metafield, 'id' | 'compareDigest' | 'type' | 'namespace' | 'key' | 'jsonValue'>;
+
+export type OnPopulateFunc = (fieldDefinition: MetafieldDefinition, fieldBuilder: FieldBuilder) => void;
 
 type CommonFindOptions = {
   owner: string;

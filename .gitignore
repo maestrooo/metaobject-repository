@@ -10,6 +10,8 @@
 
 # Generated GraphQL types
 /src/types/admin.generated.d.ts
+/src/types/admin.generated.ts
 /src/types/admin.schema.json
 /src/types/admin.types.d.ts
+/src/types/admin.types.ts
 /src/types/*.json

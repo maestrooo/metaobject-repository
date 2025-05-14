@@ -8,7 +8,7 @@ export function deserialize<T>(metaobject: Metaobject): T {
       type: metaobject.type,
       handle: metaobject.handle,
       displayName: metaobject.displayName,
-      createdAt: new Date(metaobject.createdAt),
+      /*createdAt: new Date(metaobject.createdAt),*/
       updatedAt: new Date(metaobject.updatedAt),
       capabilities: metaobject.capabilities ?? {},
       thumbnailField: metaobject.thumbnailField?.thumbnail ?? null

@@ -1,13 +1,15 @@
-export { definitionManager, DefinitionManager } from './definition-manager';
-export { definitionRepository, DefinitionRepository} from './definition-repository';
-export { MetaobjectRepository } from './metaobject-repository';
-export { metafieldRepository, MetafieldRepository } from './metafield-repository';
-export { storefrontTokenRepository, StorefrontTokenRepository } from './storefront-token-repository';
-
-export { NotFoundException, UserErrorsException } from './exception';
-
-export type { FieldDefinition, DefinitionSchemaEntry, DefinitionSchema } from './types/definitions';
+export type { MetaobjectFieldDefinition, MetaobjectDefinitionSchemaEntry, MetaobjectDefinitionSchema } from './types/metaobject-definitions';
 export type { InferObjectType, OnPopulateFunc } from './types/metaobject-repository';
+export { metaobjectDefinitionManager, MetaobjectDefinitionManager } from './metaobjects/metaobject-definition-manager';
+export { MetaobjectRepository } from './metaobjects/metaobject-repository';
+
+export type { MetafieldDefinition as MetafieldDefinitionSchemaEntry, MetafieldDefinitionSchema } from './types/metafield-definitions';
+export { metafieldDefinitionManager, MetafieldDefinitionManager } from './metafields/metafield-definition-manager';
+export { defaultMetafieldRepository, MetafieldRepository } from './metafields/metafield-repository';
+
+export { storefrontTokenRepository, StorefrontTokenRepository } from './storefront-tokens/storefront-token-repository';
+
+export { NotFoundException, UserErrorsException, DefinitionTakenException } from './exception';
 
 export { flattenFields } from './utils/flatten';
 export { fieldsDifference } from './utils/difference';

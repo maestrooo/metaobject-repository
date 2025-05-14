@@ -1,17 +1,18 @@
 import { FieldBuilder, QueryBuilder } from "raku-ql";
 import { camel } from "snake-camel";
-import { Collection, Company, Customer, File, GenericFile, Job, MediaImage, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload, Page, Product, ProductVariant, TaxonomyValue, Video } from "~/types/admin.types";
-import { DefinitionSchema, DefinitionSchemaEntry, FieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./types/definitions";
-import { CreateInput, FindOptions, OnPopulateFunc, PaginatedMetaobjects, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "./types/metaobject-repository";
-import { ClientAware } from "./client-aware";
-import { UserErrorsException } from "./exception/user-errors-exception";
-import { deserialize, serializeFields } from "./transformer";
-import { NotFoundException } from "./exception";
+import { Job, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload } from "~/types/admin.types";
+import { MetaobjectDefinitionSchema, MetaobjectDefinitionSchemaEntry, MetaobjectFieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "../types/metaobject-definitions";
+import { CreateInput, FindOptions, OnPopulateFunc, PaginatedMetaobjects, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "../types/metaobject-repository";
+import { ClientAware } from "../client-aware";
+import { UserErrorsException } from "../exception/user-errors-exception";
+import { deserialize, serializeFields } from "../transformer";
+import { NotFoundException } from "../exception";
+import { populateShopifyResourceReference } from "~/utils/builder";
 
 /**
  * Object repository
  */
-export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number]["type"]> extends ClientAware {
+export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extends D[number]["type"]> extends ClientAware {
   constructor(private readonly defs: D, public readonly type: T) {
     super();
   }
@@ -419,9 +420,9 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
   /**
    * Setup the base fields that are retrieved for all metaobjects (including the system information)
    */
-  private setupMetaobjectFragment(schema: DefinitionSchemaEntry, fragment: FieldBuilder<Metaobject>): void {
+  private setupMetaobjectFragment(schema: MetaobjectDefinitionSchemaEntry, fragment: FieldBuilder<Metaobject>): void {
     fragment
-      .fields('id', 'type', 'handle', 'createdAt', 'updatedAt', 'displayName')
+      .fields('id', 'type', 'handle', /*'createdAt',*/ 'updatedAt', 'displayName')
       .object('fields', (fields) => {
         fields.fields('key', 'jsonValue', 'type')
       });
@@ -466,7 +467,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
   /**
    * Configure the query for a specific metaobject type
    */
-  private setupMetaobjectQuery<T>(schema: DefinitionSchemaEntry, fieldBuilder: FieldBuilder<Metaobject>, populate: readonly string[], onPopulate?: OnPopulateFunc): void {
+  private setupMetaobjectQuery<T>(schema: MetaobjectDefinitionSchemaEntry, fieldBuilder: FieldBuilder<Metaobject>, populate: readonly string[], onPopulate?: OnPopulateFunc): void {
     fieldBuilder.useFragment('BaseMetaobjectFields');
     
     schema.fields.forEach((field) => {
@@ -488,11 +489,9 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
   /**
    * Setup how a reference query is generated
    */
-  private setupReferenceQuery(fieldDefinition: FieldDefinition, fieldBuilder: FieldBuilder<any>, populate: readonly string[], onPopulate?: OnPopulateFunc): void {
+  private setupReferenceQuery(fieldDefinition: MetaobjectFieldDefinition, fieldBuilder: FieldBuilder<any>, populate: readonly string[], onPopulate?: OnPopulateFunc): void {
     // We prefix all references by a _ character to avoid clashes and to easily identify them when deserializing
     fieldBuilder.object({ field: `_${camel(fieldDefinition.key)}` }, { key: fieldDefinition.key }, (field) => {
-      const baseResourceName = fieldDefinition.type.replace('list.', '');
-
       const setupReference = (reference: FieldBuilder): FieldBuilder => {
         if ((fieldDefinition.type === 'metaobject_reference' || fieldDefinition.type === 'list.metaobject_reference') && fieldDefinition.metaobjectType) {
           return reference.inlineFragment<Metaobject>('Metaobject', (fragment) => {
@@ -510,138 +509,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
           return reference;
         }
 
-        // We first call the onPopulate method to let author populate their own fields
-        if (onPopulate) {
-          onPopulate(fieldDefinition, reference);
-        }
-
-        // If nothing has been specified, we use some default fields
-        const hasFieldsExcludingTypename = reference.getFields().some((field) => (field.kind === 'field' && field.name !== '__typename'));
-
-        if (!hasFieldsExcludingTypename) {
-          switch (baseResourceName) {
-            case 'product_reference':
-              return reference.inlineFragment<Product>('Product', (fragment) => {
-                fragment
-                  .fields('id', 'handle', 'title', 'productType', 'status', 'description', 'vendor', 'tags', 'hasOnlyDefaultVariant', 'createdAt', 'updatedAt', 'publishedAt', 'templateSuffix')
-                  .object('variantsCount', (variantsCount) => {
-                    variantsCount.fields('count', 'precision')
-                  })
-                  .object('featuredImage', (featuredImage) => {
-                    featuredImage.fields('id', 'altText', 'height', 'width', 'url')
-                  })
-              });
-
-            case 'collection_reference':
-              return reference.inlineFragment<Collection>('Collection', (fragment) => {
-                fragment
-                  .fields('id', 'handle', 'title', 'description', 'hasProduct', 'sortOrder', 'updatedAt', 'templateSuffix')
-                  .object('image', (image) => {
-                    image.fields('altText', 'height', 'width', 'url')
-                  })
-              });
-            
-            case 'customer_reference':
-              return reference.inlineFragment<Customer>('Customer', (fragment) => {
-                fragment
-                  .fields('id', 'displayName', 'numberOfOrders', 'email', 'verifiedEmail', 'phone', 'locale', 'createdAt', 'updatedAt')
-                  .object('amountSpent', (amountSpent) => {
-                    amountSpent.fields('amount', 'currencyCode')
-                  })
-                  .object('image', (image => {
-                    image.fields('id', 'altText', 'height', 'width', 'url');
-                  }))
-              });
-
-            case 'company_reference':
-              return reference.inlineFragment<Company>('Company', (fragment) => {
-                fragment.fields('id', 'externalId', 'name', 'lifetimeDuration', 'createdAt', 'updatedAt')
-                  .object('totalSpent', totalSpent => {
-                    totalSpent.fields('amount', 'currencyCode')
-                  })
-                  .object('ordersCount', ordersCount => {
-                    ordersCount.fields('count', 'precision')
-                  })
-              });
-
-            case 'metaobject_reference':
-            case 'mixed_reference':
-              return reference.inlineFragment<Metaobject>('Metaobject', (fragment) => {
-                fragment
-                  .fields('id', 'type', 'handle', 'createdAt', 'updatedAt', 'displayName')
-                  .object('fields', (fields) => {
-                    fields.fields('key', 'jsonValue', 'type')
-                  })
-              });
-
-            case 'page_reference':
-              return reference.inlineFragment<Page>('Page', (fragment) => {
-                fragment.fields('id', 'handle', 'title', 'body', 'isPublished', 'createdAt', 'updatedAt', 'templateSuffix');
-              });
-
-            case 'product_taxonomy_value_reference':
-              return reference.inlineFragment<TaxonomyValue>('TaxonomyValue', (fragment) => {
-                fragment.fields('id', 'name');
-              });
-
-            case 'variant_reference':
-              return reference.inlineFragment<ProductVariant>('ProductVariant', (fragment) => {
-                fragment
-                  .fields('id', 'title', 'displayName', 'sku', 'price', 'compareAtPrice', 'availableForSale', 'inventoryQuantity', 'barcode', 'createdAt', 'updatedAt')
-                  .object('image', (image) => {
-                    image.fields('id', 'altText', 'height', 'width', 'url');
-                  })
-              });
-
-            case 'file_reference':
-              if (fieldDefinition.type === 'file_reference' || fieldDefinition.type === 'list.file_reference') {
-                reference.inlineFragment<File>('File', (fragment) => {
-                  fragment
-                    .fields('id', 'fileStatus', 'alt')
-                    .object('preview', (preview) => {
-                      preview
-                        .fields('status')
-                        .object('image', (image) => {
-                          image.fields('id', 'altText', 'height', 'width', 'url');
-                        })
-                    })
-                });
-
-                if (fieldDefinition.validations?.fileTypeOptions?.includes('Image')) {
-                  reference.inlineFragment<MediaImage>('MediaImage', (fragment) => {
-                    fragment
-                      .fields('__typename', 'mimeType')
-                      .object('originalSource', (originalSource) => {
-                        originalSource.fields('fileSize')
-                      })
-                      .object('image', (image) => {
-                        image.fields('id', 'altText', 'height', 'width', 'url');
-                      })
-                  });
-                }
-
-                if (fieldDefinition.validations?.fileTypeOptions?.includes('Video')) {
-                  reference.inlineFragment<Video>('Video', (fragment) => {
-                    fragment
-                      .fields('__typename', 'duration')
-                      .object('sources', (sources) => {
-                        sources.fields('format', 'fileSize', 'height', 'width', 'mimeType', 'url')
-                      })
-                  });
-                }
-
-                if (!fieldDefinition.validations?.fileTypeOptions) {
-                  reference.inlineFragment<GenericFile>('GenericFile', (fragment) => {
-                    fragment.fields('__typename', 'mimeType', 'originalFileSize', 'url')
-                  });
-                }
-              }
-
-              return reference;
-          }
-        }
-
-        return reference;
+        return populateShopifyResourceReference({ fieldBuilder: reference, fieldDefinition, onPopulate });
       }
 
       if (fieldDefinition.type.startsWith('list.')) {
@@ -676,7 +544,7 @@ export class MetaobjectRepository<D extends DefinitionSchema, T extends D[number
   /**
    * Retrieve the schema for a specific type
    */
-  private getDefinitionSchemaEntry(type: string): DefinitionSchemaEntry {
+  private getDefinitionSchemaEntry(type: string): MetaobjectDefinitionSchemaEntry {
     const entry = this.defs.find(def => def.type === type);
 
     if (!entry) {

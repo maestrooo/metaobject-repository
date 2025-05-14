@@ -8,12 +8,11 @@ This section explains how to create, retrieve, and update Shopify metaobject def
 
 ### Defining a schema
 
-Create a `definitions.ts` file somewhere in your product, and export your definitions. Make sure to add `as const satisfies DefinitionSchema`
+Create a `definitions.ts` file somewhere in your code, and export your definitions. Make sure to add `as const satisfies MetaobjectDefinitionSchema`
 at the end to get type validation.
 
 ```ts
-import { MetaobjectAdminAccessInput, MetaobjectStorefrontAccess } from "~/types/admin.types";
-import { DefinitionSchema, MetaobjectRepository } from "metaobject-repository";
+import { MetaobjectDefinitionSchema, MetaobjectRepository } from "metaobject-repository";
 
 export const definitions = [
   {
@@ -22,8 +21,8 @@ export const definitions = [
     description: "Representing an event",
     displayNameKey: "name",
     access: {
-      admin: MetaobjectAdminAccessInput.MerchantRead,
-      storefront: MetaobjectStorefrontAccess.PublicRead
+      admin: "MERCHANT_READ",
+      storefront: "PUBLIC_READ"
     },
     capabilities: {　
       translatable: {　enabled: true　}
@@ -85,8 +84,8 @@ export const definitions = [
     description: "Representing a host",
     displayNameKey: "name",
     access: {
-      admin: MetaobjectAdminAccessInput.MerchantRead,
-      storefront: MetaobjectStorefrontAccess.PublicRead
+      admin: "MERCHANT_READ",
+      storefront: "PUBLIC_READ"
     },
     fields: [
       {
@@ -105,7 +104,7 @@ export const definitions = [
       }
     ]
   },
-] as const satisfies DefinitionSchema;
+] as const satisfies MetaobjectDefinitionSchema;
 
 export const eventRepository = new MetaobjectRepository(definitions, "$app:event");
 export const hostRepository = new MetaobjectRepository(definitions, "$app:repository");
@@ -122,17 +121,17 @@ is created, dependencies are automatically resolved, and definitions are creatin
 
 ### Creating a schema
 
-Use the `definitionManager` to automatically create metaobject definitions from a static schema:
+Use the `metaobjectDefinitionManager` to automatically create metaobject definitions from a static schema:
 
 ```ts
-import { definitionManager } from "metaobject-repository";
+import { metaobjectDefinitionManager } from "metaobject-repository";
 import { definitions } from "./your-definitions";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
 
-  definitionManager.withClient(admin.graphql);
-  await definitionManager.createFromSchema(definitions);
+  metaobjectDefinitionManager.withClient(admin.graphql);
+  await metaobjectDefinitionManager.createFromSchema(definitions);
 
   return null;
 };
@@ -148,24 +147,25 @@ This method does a few things automatically:
 
 ---
 
-## Using the definition repository
+## Managing definitions individually
 
-In advanced use cases, or when working with dynamic fields, you might want to update or fetch definitions manually. For this, use `definitionRepository`.
+In advanced use cases, or when working with dynamic fields, you might want to update or fetch definitions manually. This can be useful, for instance,
+to customize a definition on a per-merchant basis.
 
-> ⚠️ Don't confuse `definitionManager` (higher-level, idempotent) with `definitionRepository` (low-level control).
+> When using those methods, you must format the validations yourself, and resolve metaobject references to ID.
 
 ---
 
 ### Updating a definition
 
 ```ts
-import { definitionRepository } from "metaobject-repository";
+import { metaobjectDefinitionManager } from "metaobject-repository";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  definitionRepository.withClient(admin.graphql);
+  metaobjectDefinitionManager.withClient(admin.graphql);
 
-  await definitionManager.update({
+  await metaobjectDefinitionManager.updateDefinition({
     type: "$app:event",
     definition: {
       name: "Big events", // Change the name
@@ -186,13 +186,32 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 ---
 
+### Deleting a definition
+
+```ts
+import { metaobjectDefinitionManager } from "metaobject-repository";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+  metaobjectDefinitionManager.withClient(admin.graphql);
+
+  const deletedId = await metaobjectDefinitionManager.deleteDefinition("$app:event");
+
+  return null;
+};
+```
+
+---
+
 ### Creating a definition manually
 
 Most of the time, you will use the `createFromSchema` from the definition manager, as it creates automatically all your definitions
 and handle the dependencies between metaobjects automatically.
 
 ```ts
-await definitionManager.create({
+import { metaobjectDefinitionManager } from "metaobject-repository";
+
+const createdId = await metaobjectDefinitionManager.createDefinition({
   definition: {
     type: "$app:event",
     name: "Big events",
@@ -211,9 +230,13 @@ await definitionManager.create({
 ### Retrieving definitions
 
 ```ts
-const definition = await definitionRepository.findByType("$app:event");
+import { metaobjectDefinitionManager } from "metaobject-repository";
+
+metaobjectDefinitionManager.withClient(admin.graphql);
+
+const definition = await metaobjectDefinitionManager.findDefinitionByType("$app:event");
 // or
-const definition = await definitionRepository.findByTypeOrFail("$app:event"); // throws if not found
+const definition = await metaobjectDefinitionManager.findDefinitionByTypeOrFail("$app:event"); // throws if not found
 ```
 
 ---
@@ -228,4 +251,4 @@ const definition = await definitionRepository.findByTypeOrFail("$app:event"); //
 
 ## Best practice
 
-Use `createFromSchema` for reliable setup during app installation or migration. Use the `definitionRepository` only when you need dynamic control or one-off changes outside of the schema.
+Use `createFromSchema` for reliable setup during app installation or migration, or use the `createDefinition` or `updateDefinition` only when you need dynamic control or one-off changes outside of the schema.

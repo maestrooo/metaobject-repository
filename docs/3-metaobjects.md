@@ -16,6 +16,8 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
 }
 ```
 
+Repositories are not created automatically. You must create a repository for each of your metaobject types. [More information](docs/2-definitions.md#defining-a-schema).
+
 > Shopify apps are currently using Remix 2.0, which does not support middlewares. Each loaders are run in parallel,
 so you must ensure that you set the client on each loader. When Shopify will add support for middleware, this process will be simplified.
 
@@ -282,7 +284,7 @@ event.system.id;
 event.system.handle;
 event.system.type;
 event.system.displayName;
-event.system.createdAt;
+// event.system.createdAt; => not yet available, currently only available on unstable
 event.system.updatedAt;
 event.system.capabilities;
 event.system.thumbnail;

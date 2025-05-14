@@ -3,12 +3,12 @@ import { MetafieldAccessInput, MetafieldDefinitionCreatePayload, MetafieldDefini
   MetafieldDefinitionInput, MetafieldDefinitionPinPayload, MetafieldDefinitionUnpinPayload, MetafieldDefinitionUpdateInput, 
   MetafieldDefinitionUpdatePayload, MetafieldDefinitionValidationInput, MetafieldOwnerType, MetaobjectDefinition 
 } from "~/types/admin.types";
-import { ClientAware } from "~/client-aware";
 import { DefinitionTakenException } from "~/exception";
-import { MetafieldDefinitionSchema } from "~/types/metafield-definitions";
 import { convertValidations } from "~/utils/metafield-validations";
+import { doRequest } from "~/utils/request";
+import { SchemaProvider } from "~/provider/schema-provider";
 
-export class MetafieldDefinitionManager extends ClientAware {
+export class MetafieldDefinitionManager {
   private metaobjectDefinitionIdCache = new Map<string, string>();
 
   /**
@@ -21,7 +21,13 @@ export class MetafieldDefinitionManager extends ClientAware {
    * Create a list of metafield definitions from a schema. To make it easier and reduce the query cost, the
    * manager will attempt to create all definitions and simply fail if any of them already exist.
    */
-  async createFromSchema(definitions: MetafieldDefinitionSchema): Promise<void> {
+  async createFromSchema(): Promise<void> {
+    const definitions = SchemaProvider.metafieldDefinitions;
+
+    if (!definitions) {
+      throw new Error('Metafield definitions schema is not set. Call SchemaProvider.setMetafieldDefinitions() first.');
+    }
+
     const definitionsInput = await Promise.all(
       definitions.map(async (definition): Promise<MetafieldDefinitionInput> => {
         const rawValidations = convertValidations(definition);
@@ -98,7 +104,7 @@ export class MetafieldDefinitionManager extends ClientAware {
       });
 
     // Perform the request
-    const { createdDefinition, userErrors } = (await (await this.doRequest({ builder, variables: { definition } })).json()).data.metafieldDefinitionCreate;
+    const { createdDefinition, userErrors } = (await (await doRequest({ builder, variables: { definition } })).json()).data.metafieldDefinitionCreate;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -130,7 +136,7 @@ export class MetafieldDefinitionManager extends ClientAware {
       });
 
     // Perform the request
-    const { userErrors } = (await (await this.doRequest({ builder, variables: { definition } })).json()).data.metafieldDefinitionUpdate;
+    const { userErrors } = (await (await doRequest({ builder, variables: { definition } })).json()).data.metafieldDefinitionUpdate;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -156,7 +162,7 @@ export class MetafieldDefinitionManager extends ClientAware {
 
     // Perform the request
     const variables = { deleteAllAssociatedMetafields, identifier };
-    const { deletedDefinitionId, userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metafieldDefinitionDelete;
+    const { deletedDefinitionId, userErrors } = (await (await doRequest({ builder, variables })).json()).data.metafieldDefinitionDelete;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -181,7 +187,7 @@ export class MetafieldDefinitionManager extends ClientAware {
 
     // Perform the request
     const variables = { identifier };
-    const { userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metafieldDefinitionPin;
+    const { userErrors } = (await (await doRequest({ builder, variables })).json()).data.metafieldDefinitionPin;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -204,7 +210,7 @@ export class MetafieldDefinitionManager extends ClientAware {
 
     // Perform the request
     const variables = { identifier };
-    const { userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metafieldDefinitionUnpin;
+    const { userErrors } = (await (await doRequest({ builder, variables })).json()).data.metafieldDefinitionUnpin;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -233,7 +239,7 @@ export class MetafieldDefinitionManager extends ClientAware {
         metaobjectDefinition.fields('id');
       });
 
-    const { data } = await (await this.doRequest({ builder, variables: { type } })).json();
+    const { data } = await (await doRequest({ builder, variables: { type } })).json();
 
     const id = data.metaobjectDefinitionByType?.id ?? null;
 

@@ -1,13 +1,13 @@
-import { Shop, StorefrontAccessToken, StorefrontAccessTokenCreatePayload, StorefrontAccessTokenDeletePayload } from "../types/admin.types";
-import { ClientAware } from "../client-aware";
 import { QueryBuilder } from "raku-ql";
+import { Shop, StorefrontAccessToken, StorefrontAccessTokenCreatePayload, StorefrontAccessTokenDeletePayload } from "~/types/admin.types";
+import { doRequest } from "~/utils/request";
 
 type PickedStorefrontAccessToken = Pick<StorefrontAccessToken, 'id' | 'accessToken' | 'title'>;
 
 /**
  * Manage storefront access tokens
  */
-export class StorefrontTokenRepository extends ClientAware {
+export class StorefrontTokenRepository {
   /**
    * Get a list of existing tokens
    */
@@ -21,7 +21,7 @@ export class StorefrontTokenRepository extends ClientAware {
         })
       })
 
-    return (await (await this.doRequest({ builder })).json()).data.shop.storefrontAccessTokens.nodes;
+    return (await (await doRequest({ builder })).json()).data.shop.storefrontAccessTokens.nodes;
   }
 
   /**
@@ -40,7 +40,7 @@ export class StorefrontTokenRepository extends ClientAware {
       });
 
     const input = { title: options.title };
-    const { storefrontAccessToken, userErrors } = (await (await this.doRequest({ builder, variables: { input } })).json()).data.storefrontAccessTokenCreate;
+    const { storefrontAccessToken, userErrors } = (await (await doRequest({ builder, variables: { input } })).json()).data.storefrontAccessTokenCreate;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -82,7 +82,7 @@ export class StorefrontTokenRepository extends ClientAware {
             })
         });
 
-      const { userErrors } = (await (await this.doRequest({ builder, variables: { input: { id: tokenToDelete.id } } })).json()).data.storefrontAccessTokenDelete;
+      const { userErrors } = (await (await doRequest({ builder, variables: { input: { id: tokenToDelete.id } } })).json()).data.storefrontAccessTokenDelete;
 
       if (userErrors.length > 0) {
         console.warn(userErrors);

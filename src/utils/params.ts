@@ -1,4 +1,4 @@
-import { FindOptions, SortKey } from '../types/metaobject-repository'
+import { FindOptions, SortKey } from '~/types/metaobject-repository'
 
 /**
  * Extract a find object to be used with the `find` method.

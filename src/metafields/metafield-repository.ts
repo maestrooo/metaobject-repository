@@ -1,22 +1,19 @@
 import { AppInstallation, HasMetafields, MetafieldConnection, MetafieldIdentifierInput, MetafieldOwnerType, MetafieldsDeletePayload, MetafieldsSetInput, MetafieldsSetPayload } from "~/types/admin.types";
-import { FindOptions, PaginatedMetafields, PickedMetafield } from "../types/metafield-repository";
-import { ClientAware } from "../client-aware";
 import { FieldBuilder, QueryBuilder } from "raku-ql";
-import { MetafieldDefinitionSchema, MetafieldDefinition } from "~/types/metafield-definitions";
+import { FindOptions, PaginatedMetafields, PickedMetafield } from "~/types/metafield-repository";
+import { MetafieldDefinition } from "~/types/metafield-definitions";
 import { AllowRawEnum } from "~/types/utils";
 import { populateShopifyResourceReference } from "~/utils/builder";
+import { doRequest } from "~/utils/request";
+import { SchemaProvider } from "~/provider/schema-provider";
 
 type MakeOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 /**
  * Provide a thin wrapper around metafields to easily manipulate them
  */
-export class MetafieldRepository<D extends MetafieldDefinitionSchema> extends ClientAware {
+export class MetafieldRepository {
   private appInstallationIdPromise?: Promise<any>;
-
-  constructor(private readonly defs: D = ([] as unknown as D)) {
-    super();
-  }
 
   /**
    * Get a single app metafield
@@ -36,7 +33,7 @@ export class MetafieldRepository<D extends MetafieldDefinitionSchema> extends Cl
 
     const variables = { key: opts.key, namespace: opts.namespace };
 
-    return (await ((await this.doRequest({ builder, variables })).json())).data.currentAppInstallation.metafield;
+    return (await ((await doRequest({ builder, variables })).json())).data.currentAppInstallation.metafield;
   }
 
   /**
@@ -67,7 +64,7 @@ export class MetafieldRepository<D extends MetafieldDefinitionSchema> extends Cl
         })
       })
 
-    const { nodes: items, pageInfo } = (await ((await this.doRequest({ builder, variables })).json())).data.currentAppInstallation.metafields;
+    const { nodes: items, pageInfo } = (await ((await doRequest({ builder, variables })).json())).data.currentAppInstallation.metafields;
 
     return { pageInfo, items };
   }
@@ -83,7 +80,7 @@ export class MetafieldRepository<D extends MetafieldDefinitionSchema> extends Cl
 
     const builder = QueryBuilder.query('GetMetafield')
       .variables({ id: 'ID!', namespace: 'String!', key: 'String!' })
-      .operation<HasMetafields>(operationName, hasMetafield => {
+      .operation<HasMetafields>(operationName, { id: '$id' }, hasMetafield => {
         hasMetafield.object('metafield', { namespace: '$namespace', key: '$key' }, metafield => {
           metafield.fields('id', 'compareDigest', 'type', 'namespace', 'key', 'jsonValue');
 
@@ -110,7 +107,7 @@ export class MetafieldRepository<D extends MetafieldDefinitionSchema> extends Cl
       });
 
     const variables = { id: opts.owner, namespace: opts.namespace, key: opts.key };
-    const { metafield } = (await ((await this.doRequest({ builder, variables })).json())).data[operationName];
+    const { metafield } = (await ((await doRequest({ builder, variables })).json())).data[operationName];
 
     return metafield;
   }
@@ -141,7 +138,7 @@ export class MetafieldRepository<D extends MetafieldDefinitionSchema> extends Cl
         })
       })
 
-    const { nodes: items, pageInfo } = (await ((await this.doRequest({ builder, variables })).json())).data.metafields;
+    const { nodes: items, pageInfo } = (await ((await doRequest({ builder, variables })).json())).data.metafields;
 
     return { pageInfo, items };
   }
@@ -176,7 +173,7 @@ export class MetafieldRepository<D extends MetafieldDefinitionSchema> extends Cl
           });
       })
 
-    const { userErrors } = (await (await this.doRequest({ builder, variables: { metafields: input } })).json()).data.metafieldsSet;
+    const { userErrors } = (await (await doRequest({ builder, variables: { metafields: input } })).json()).data.metafieldsSet;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -197,7 +194,7 @@ export class MetafieldRepository<D extends MetafieldDefinitionSchema> extends Cl
           });
       });
 
-    const { userErrors } = (await (await this.doRequest({ builder, variables: { metafields: identifiers } })).json()).data.metafieldsDelete;
+    const { userErrors } = (await (await doRequest({ builder, variables: { metafields: identifiers } })).json()).data.metafieldsDelete;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -216,7 +213,7 @@ export class MetafieldRepository<D extends MetafieldDefinitionSchema> extends Cl
             currentAppInstallation.fields('id');
           });
 
-        return (await (await this.doRequest({ builder })).json()).data.currentAppInstallation.id;
+        return (await (await doRequest({ builder })).json()).data.currentAppInstallation.id;
       })();
     }
 
@@ -237,7 +234,17 @@ export class MetafieldRepository<D extends MetafieldDefinitionSchema> extends Cl
         return; // Not a reference metafield
       }
 
-      populateShopifyResourceReference({ fieldBuilder: opts.fieldBuilder, fieldDefinition: metafieldDefinition });
+      if (metafieldDefinition.type.startsWith('list.')) {
+        opts.fieldBuilder.connection('references', { first: 50 }, references => {
+          references.nodes(nodeBuilder => {
+            populateShopifyResourceReference({ fieldBuilder: nodeBuilder, fieldDefinition: metafieldDefinition });
+          });
+        });
+      } else {
+        opts.fieldBuilder.object('reference', nodeBuilder => {
+          populateShopifyResourceReference({ fieldBuilder: nodeBuilder, fieldDefinition: metafieldDefinition });
+        })
+      }
     }
   }
 
@@ -245,7 +252,7 @@ export class MetafieldRepository<D extends MetafieldDefinitionSchema> extends Cl
    * Get the metafield definition entry (if it exists)
    */
   private getMetafieldDefinition(ownerType: string, key: string, namespace?: string): MetafieldDefinition | null {
-    const definition = this.defs.find(def => {
+    const definition = SchemaProvider.metafieldDefinitions?.find(def => {
       return def.key === key && def.ownerType === ownerType && (!namespace || def.namespace === namespace);
     });
 
@@ -253,4 +260,4 @@ export class MetafieldRepository<D extends MetafieldDefinitionSchema> extends Cl
   }
 }
 
-export const defaultMetafieldRepository = new MetafieldRepository();
+export const metafieldRepository = new MetafieldRepository();

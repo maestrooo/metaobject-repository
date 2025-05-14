@@ -1,9 +1,9 @@
-import { MetaobjectDefinitionSchema } from "../types/metaobject-definitions";
 import { MetaobjectAccessInput, MetaobjectDefinition, MetaobjectDefinitionCreateInput, MetaobjectDefinitionCreatePayload, MetaobjectDefinitionDeletePayload, MetaobjectDefinitionUpdateInput, MetaobjectDefinitionUpdatePayload } from "~/types/admin.types";
-import { ClientAware } from "../client-aware";
 import { QueryBuilder } from "raku-ql";
 import { DefinitionTakenException } from "~/exception/definition-taken-exception";
 import { convertValidations } from "~/utils/metafield-validations";
+import { doRequest } from "~/utils/request";
+import { SchemaProvider } from "~/provider/schema-provider";
 
 type SyncFromSchemaOptions = {
   deleteDanglingDefinitions: boolean;
@@ -13,7 +13,7 @@ type SyncFromSchemaOptions = {
 /**
  * Manage the schema definitions
  */
-export class MetaobjectDefinitionManager extends ClientAware {
+export class MetaobjectDefinitionManager {
   private definitionIdCache = new Map<string, string>();
 
   /**
@@ -27,7 +27,13 @@ export class MetaobjectDefinitionManager extends ClientAware {
    * deeper definitions (no cross-deps) first, then dependent ones, so that validations can be
    * resolved directly at creation time.
    */
-  async createFromSchema(definitions: MetaobjectDefinitionSchema): Promise<void> {
+  async createFromSchema(): Promise<void> {
+    const definitions = SchemaProvider.metaobjectDefinitions;
+
+    if (!definitions) {
+      throw new Error('Metaobject definitions schema is not set. Call SchemaProvider.setMetaobjectDefinitions() first.');
+    }
+
     // 1) Build GraphQL inputs from in-memory schema
     const createInputs: Record<string, MetaobjectDefinitionCreateInput> = {};
     definitions.forEach((def) => {
@@ -141,7 +147,7 @@ export class MetaobjectDefinitionManager extends ClientAware {
    * Sync local definitions with the Shopify schema. By default, definitions that exist on Shopify but no longer locally are not
    * deleted to avoid data loss. To delete dangling definitions, set `deleteDanglingDefinitions` to true.
    */
-  async syncFromSchema(definitions: MetaobjectDefinitionSchema, opts?: SyncFromSchemaOptions): Promise<void> {
+  async syncFromSchema(opts?: SyncFromSchemaOptions): Promise<void> {
     throw new Error("Not implemented yet");
   }
 
@@ -194,7 +200,7 @@ export class MetaobjectDefinitionManager extends ClientAware {
           });
       });
 
-    const { metaobjectDefinitionByType } = (await (await this.doRequest({ builder, variables: { type } })).json()).data;
+    const { metaobjectDefinitionByType } = (await (await doRequest({ builder, variables: { type } })).json()).data;
 
     return metaobjectDefinitionByType;
   }
@@ -236,7 +242,7 @@ export class MetaobjectDefinitionManager extends ClientAware {
       });
 
     // Perform the request
-    const { metaobjectDefinition, userErrors } = (await (await this.doRequest({ builder, variables: { definition } })).json()).data.metaobjectDefinitionCreate;
+    const { metaobjectDefinition, userErrors } = (await (await doRequest({ builder, variables: { definition } })).json()).data.metaobjectDefinitionCreate;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -270,7 +276,7 @@ export class MetaobjectDefinitionManager extends ClientAware {
           });
       });
 
-    const { userErrors } = (await (await this.doRequest({ builder, variables: { id, definition: options.definition } })).json()).data.metaobjectDefinitionUpdate;
+    const { userErrors } = (await (await doRequest({ builder, variables: { id, definition: options.definition } })).json()).data.metaobjectDefinitionUpdate;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -294,7 +300,7 @@ export class MetaobjectDefinitionManager extends ClientAware {
           });
       });
 
-    const { deletedId, userErrors } = (await (await this.doRequest({ builder, variables: { id } })).json()).data.metaobjectDefinitionDelete;
+    const { deletedId, userErrors } = (await (await doRequest({ builder, variables: { id } })).json()).data.metaobjectDefinitionDelete;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -355,7 +361,7 @@ export class MetaobjectDefinitionManager extends ClientAware {
         metaobjectDefinition.fields('id');
       });
 
-    const { data } = await (await this.doRequest({ builder, variables: { type } })).json();
+    const { data } = await (await doRequest({ builder, variables: { type } })).json();
 
     const id = data.metaobjectDefinitionByType?.id ?? null;
 

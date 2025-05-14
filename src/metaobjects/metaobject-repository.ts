@@ -1,20 +1,21 @@
+import { ApiVersion } from "@shopify/shopify-app-remix/server";
 import { FieldBuilder, QueryBuilder } from "raku-ql";
 import { camel } from "snake-camel";
 import { Job, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload } from "~/types/admin.types";
-import { MetaobjectDefinitionSchema, MetaobjectDefinitionSchemaEntry, MetaobjectFieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "../types/metaobject-definitions";
-import { CreateInput, FindOptions, OnPopulateFunc, PaginatedMetaobjects, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "../types/metaobject-repository";
-import { ClientAware } from "../client-aware";
-import { UserErrorsException } from "../exception/user-errors-exception";
-import { deserialize, serializeFields } from "../transformer";
-import { NotFoundException } from "../exception";
+import { MetaobjectDefinitionSchema, MetaobjectDefinitionSchemaEntry, MetaobjectFieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "~/types/metaobject-definitions";
+import { CreateInput, FindOptions, OnPopulateFunc, PaginatedMetaobjects, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "~/types/metaobject-repository";
+import { UserErrorsException } from "~/exception/user-errors-exception";
+import { deserialize, serializeFields } from "~/transformer";
+import { NotFoundException } from "~/exception";
 import { populateShopifyResourceReference } from "~/utils/builder";
+import { doRequest } from "~/utils/request";
+import { SchemaProvider } from "~/provider/schema-provider";
 
 /**
  * Object repository
  */
-export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extends D[number]["type"]> extends ClientAware {
-  constructor(private readonly defs: D, public readonly type: T) {
-    super();
+export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extends D[number]["type"]> {
+  constructor(public readonly type: T) {
   }
 
   /**
@@ -42,7 +43,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       });
     
     const variables = { id: this.transformId(id) };
-    const { metaobject } = (await (await this.doRequest({ builder, variables })).json()).data;
+    const { metaobject } = (await (await doRequest({ builder, variables })).json()).data;
 
     return metaobject ? deserialize(metaobject) : null;
   }
@@ -82,7 +83,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       });
 
     const variables = { handle: { handle, type: this.type } };
-    const { metaobjectByHandle } = (await (await this.doRequest({ builder, variables })).json()).data;
+    const { metaobjectByHandle } = (await (await doRequest({ builder, variables })).json()).data;
 
     return metaobjectByHandle ? deserialize(metaobjectByHandle) : null;
   }
@@ -127,7 +128,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
         });
       });
 
-    const { nodes } = (await (await this.doRequest({ builder })).json()).data.metaobjects;
+    const { nodes } = (await (await doRequest({ builder })).json()).data.metaobjects;
 
     return nodes.map((metaobject: Metaobject) => deserialize(metaobject));
   }
@@ -163,7 +164,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
         });
       });
 
-    const { nodes, pageInfo } = (await (await this.doRequest({ builder })).json()).data.metaobjects;
+    const { nodes, pageInfo } = (await (await doRequest({ builder })).json()).data.metaobjects;
 
     return {
       pageInfo,
@@ -209,7 +210,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     };
 
-    const { metaobject, userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metaobjectCreate;
+    const { metaobject, userErrors } = (await (await doRequest({ builder, variables })).json()).data.metaobjectCreate;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -258,7 +259,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     };
 
-    const { metaobjects, userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metaobjectsCreate;
+    const { metaobjects, userErrors } = (await (await doRequest({ builder, variables, apiVersion: ApiVersion.Unstable })).json()).data.metaobjectsCreate;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -301,7 +302,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     };
 
-    const { metaobject, userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metaobjectUpdate;
+    const { metaobject, userErrors } = (await (await doRequest({ builder, variables })).json()).data.metaobjectUpdate;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -347,7 +348,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     };
 
-    const { metaobject, userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metaobjectUpsert;
+    const { metaobject, userErrors } = (await (await doRequest({ builder, variables })).json()).data.metaobjectUpsert;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -371,7 +372,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       });
 
     const variables = { id: this.transformId(id) };
-    const { deletedId, userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metaobjectDelete; 
+    const { deletedId, userErrors } = (await (await doRequest({ builder, variables })).json()).data.metaobjectDelete; 
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -402,7 +403,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     }
     
-    const { job, userErrors } = (await (await this.doRequest({ builder, variables })).json()).data.metaobjectBulkDelete;
+    const { job, userErrors } = (await (await doRequest({ builder, variables })).json()).data.metaobjectBulkDelete;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -545,7 +546,13 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
    * Retrieve the schema for a specific type
    */
   private getDefinitionSchemaEntry(type: string): MetaobjectDefinitionSchemaEntry {
-    const entry = this.defs.find(def => def.type === type);
+    const definitions = SchemaProvider.metaobjectDefinitions;
+
+    if (!definitions) {
+      throw new Error('Metaobject definitions are not set. Call SchemaProvider.setMetaobjectDefinitions() before interacting with repositories and managers.');
+    }
+
+    const entry = definitions.find(def => def.type === type);
 
     if (!entry) {
       throw new Error(`Can't find any definition schema with the type ${type}`);

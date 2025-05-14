@@ -10,7 +10,7 @@ import { MetaobjectCapabilityDataInput, PageInfo } from "./admin.types";
 import { MetaobjectDefinitionByType, DefinitionCapabilities, MetaobjectDefinitionSchema, MetaobjectFieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./metaobject-definitions";
 import { DefaultMap } from "./fields";
 import { MetaobjectRepository } from "~/metaobjects/metaobject-repository";
-import { CamelCase, CamelCaseKeys } from "./utils";
+import { CamelCase, CamelCaseKeys, PaginationArgs } from "./utils";
 
 /**
  * --------------------------------------------------------------------------------------------
@@ -112,30 +112,8 @@ type CommonFindOptions = {
   sortKey?: SortKey;
 };
 
-// 1) forward pagination: “first” is required, you may pass “after”,
-//    and you must NOT pass “last” or “before”
-type ForwardFindOptions = CommonFindOptions & {
-  first:  number;
-  after?: string;
-
-  // explicitly ban these:
-  last?:   never;
-  before?: never;
-};
-
-// 2) backward pagination: “last” is required, you may pass “before”,
-//    and you must NOT pass “first” or “after”
-type BackwardFindOptions = CommonFindOptions & {
-  last:   number;
-  before?: string;
-
-  // explicitly ban these:
-  first?: never;
-  after?: never;
-};
-
 // Union forces “at least one of first|last” and applies the mutual-exclusion rules
-export type FindOptions = ForwardFindOptions | BackwardFindOptions;
+export type FindOptions = CommonFindOptions & (PaginationArgs<"forward"> | PaginationArgs<"backward">);
 
 export type PaginatedMetaobjects<D extends MetaobjectDefinitionSchema, T extends D[number]["type"], P extends ValidPopulatePaths<D, T> = never> = {
   pageInfo: PageInfo, 

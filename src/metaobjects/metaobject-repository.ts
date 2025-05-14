@@ -14,8 +14,8 @@ import { SchemaProvider } from "~/provider/schema-provider";
 /**
  * Object repository
  */
-export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extends D[number]["type"]> {
-  constructor(public readonly type: T) {
+export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extends D[number]["type"] = D[number]["type"]> {
+  constructor(private readonly type: T) {
   }
 
   /**
@@ -31,7 +31,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
     id: string,
     opts?: PopulateOptions<P>
   ): Promise<FromDefinitionWithSystemData<D, T, P> | null> {
-    const definition = this.getDefinitionSchemaEntry(this.type);
+    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
 
     const builder = QueryBuilder.query('GetMetaobject')
       .variables({ id: 'ID!' })
@@ -71,7 +71,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
     handle: string,
     opts?: PopulateOptions<P>
   ): Promise<FromDefinitionWithSystemData<D, T, P> | null> {
-    const definition = this.getDefinitionSchemaEntry(this.type);
+    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
 
     const builder = QueryBuilder.query('GetMetaobjectByHandle')
       .variables({ handle: 'MetaobjectHandleInput!' })
@@ -116,7 +116,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       sortKey: opts?.sortKey
     }
 
-    const definition = this.getDefinitionSchemaEntry(this.type);
+    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
 
     const builder = QueryBuilder.query('GetMetaobjects')
       .fragment<Metaobject>('BaseMetaobjectFields', 'Metaobject', (fragment) => {
@@ -152,7 +152,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       connectionParameters.first = 50; // Provide a default value for first
     }
 
-    const definition = this.getDefinitionSchemaEntry(this.type);
+    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
 
     const builder = QueryBuilder.query('GetMetaobjects')
       .fragment<Metaobject>('BaseMetaobjectFields', 'Metaobject', (fragment) => {
@@ -185,7 +185,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
     input: CreateInput<D, T>, 
     opts?: PopulateOptions<P>
   ): Promise<FromDefinitionWithSystemData<D, T, P>> {
-    const definition = this.getDefinitionSchemaEntry(this.type);
+    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
 
     const builder = QueryBuilder.mutation('CreateMetaobject')
       .variables({ metaobject: 'MetaobjectCreateInput!' })
@@ -230,7 +230,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       throw new Error('You can only create a maximum of 25 metaobjects at once');
     }
 
-    const definition = this.getDefinitionSchemaEntry(this.type);
+    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
 
     const builder = QueryBuilder.mutation('CreateMetaobjects')
       .variables({ input: 'MetaobjectsCreateInput!' })
@@ -275,7 +275,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
     input: UpdateInput<D, T>, 
     opts?: PopulateOptions<P>
   ): Promise<FromDefinitionWithSystemData<D, T, P>> {
-    const definition = this.getDefinitionSchemaEntry(this.type);
+    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
 
     const builder = QueryBuilder.mutation('UpdateMetaobject')
       .variables({ id: 'ID!', metaobject: 'MetaobjectUpdateInput!' })
@@ -318,7 +318,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
     input: UpsertInput<D, T>, 
     opts?: PopulateOptions<P>
   ): Promise<FromDefinitionWithSystemData<D, T, P>> {
-    const definition = this.getDefinitionSchemaEntry(this.type);
+    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
 
     const builder = QueryBuilder.mutation('UpsertMetaobject')
       .variables({ handle: 'MetaobjectHandleInput!', metaobject: 'MetaobjectUpsertInput!' })
@@ -496,14 +496,14 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       const setupReference = (reference: FieldBuilder): FieldBuilder => {
         if ((fieldDefinition.type === 'metaobject_reference' || fieldDefinition.type === 'list.metaobject_reference') && fieldDefinition.metaobjectType) {
           return reference.inlineFragment<Metaobject>('Metaobject', (fragment) => {
-            this.setupMetaobjectQuery(this.getDefinitionSchemaEntry(fieldDefinition.metaobjectType!), fragment, populate, onPopulate);
+            this.setupMetaobjectQuery(SchemaProvider.getMetaobjectDefinitionEntry(fieldDefinition.metaobjectType!), fragment, populate, onPopulate);
           });
         }
 
         if ((fieldDefinition.type === 'mixed_reference' || fieldDefinition.type === 'list.mixed_reference') && fieldDefinition.metaobjectTypes) {
           fieldDefinition.metaobjectTypes?.forEach((metaobjectType) => {
             reference.inlineFragment<Metaobject>('Metaobject', (fragment) => {
-              this.setupMetaobjectQuery(this.getDefinitionSchemaEntry(metaobjectType), fragment, populate, onPopulate);
+              this.setupMetaobjectQuery(SchemaProvider.getMetaobjectDefinitionEntry(metaobjectType), fragment, populate, onPopulate);
             })
           });
 
@@ -540,24 +540,5 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
    */
   private transformId(id: string): string {
     return id.startsWith('gid://shopify/Metaobject') ? id : `gid://shopify/Metaobject/${id}`;
-  }
-
-  /**
-   * Retrieve the schema for a specific type
-   */
-  private getDefinitionSchemaEntry(type: string): MetaobjectDefinitionSchemaEntry {
-    const definitions = SchemaProvider.metaobjectDefinitions;
-
-    if (!definitions) {
-      throw new Error('Metaobject definitions are not set. Call SchemaProvider.setMetaobjectDefinitions() before interacting with repositories and managers.');
-    }
-
-    const entry = definitions.find(def => def.type === type);
-
-    if (!entry) {
-      throw new Error(`Can't find any definition schema with the type ${type}`);
-    }
-
-    return entry;
   }
 }

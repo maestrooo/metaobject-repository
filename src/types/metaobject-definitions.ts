@@ -1,6 +1,6 @@
 import { JSONSchema, FromSchema } from "json-schema-to-ts";
 import { MetaobjectAccessInput, MetaobjectThumbnail, MetaobjectCapabilityDataOnlineStore, MetaobjectCapabilityDataPublishable, MetaobjectCapabilityCreateInput } from "~/types/admin.types";
-import { BaseFieldType, DefaultMap, FieldType, FieldTypeWithValidation, FieldValidations, FileMapping, FileTypeVal, ListElement, MaybeNullableNonList, PopulatedMap, ValidationConfigMap } from "./fields";
+import { BaseFieldType, DefaultMap, FileMapping, FileTypeVal, MaybeNullableNonList, PopulatedMap } from "./fields";
 import { AllowRawEnum, CamelCase, CamelCaseKeys, Head, Tail } from "./utils";
 import { MetafieldBaseDefinition } from "./metafield-definitions";
 

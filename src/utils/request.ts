@@ -6,12 +6,18 @@ import { ClientProvider } from "~/provider/client-provider";
 
 type FuncReturnType = ReturnType<AdminGraphqlClient<AdminOperations>>;
 
-export function doRequest(opts: { builder: OperationBuilder, variables?: Record<string, any>, apiVersion?: ApiVersion }): FuncReturnType {
+type DoRequestOptions = {
+  builder: OperationBuilder;
+  variables?: Record<string, any>;
+  apiVersion?: ApiVersion;
+}
+
+export function doRequest({ builder, variables, apiVersion }: DoRequestOptions): FuncReturnType {
   const client = ClientProvider.client;
 
   if (!client) {
     throw new Error('GraphQL client is not set. Call ClientProvider.setClient() before interacting with repositories and managers.');
   }
 
-  return client(opts.builder.build(), { variables: opts.variables, apiVersion: opts.apiVersion });
+  return client(builder.build(), { variables: variables, apiVersion: apiVersion });
 }

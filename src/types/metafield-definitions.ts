@@ -7,13 +7,11 @@ export type MetafieldDefinitionMap = {
     name: string;
     type: T;
     key: string;
-    required?: boolean;
     description?: string;
   } & FieldValidations<T>;
 }
 
 export type MetafieldBaseDefinition = MetafieldDefinitionMap[keyof MetafieldDefinitionMap];
-
 
 /**
  * --------------------------------------------------------------------------------------------
@@ -21,8 +19,7 @@ export type MetafieldBaseDefinition = MetafieldDefinitionMap[keyof MetafieldDefi
  * --------------------------------------------------------------------------------------------
  */
 
-export type MetafieldDefinition = 
-  MetafieldBaseDefinition & {
+export type MetafieldDefinition = MetafieldBaseDefinition & {
   ownerType: AllowRawEnum<MetafieldOwnerType>;
   namespace?: string;
   access?: AllowRawEnum<MetafieldAccessInput>;

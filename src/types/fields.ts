@@ -240,10 +240,7 @@ export type FileMapping<FT extends FileTypeVal> =
  * If F["required"] is literally `true`, keep T as‐is, 
  * otherwise allow T | null (only for non-list fields)
  */
-export type MaybeNullableNonList<
-  F extends { required?: boolean; type: string },
-  T
-> =
+export type MaybeNullableNonList<F extends { required?: boolean; type: string }, T> =
   // If it’s a list field, leave it alone
   F["type"] extends `list.${string}` ? T
   // Otherwise, if required===true keep T, else T|null

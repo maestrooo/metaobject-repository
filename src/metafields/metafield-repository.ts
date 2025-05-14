@@ -1,4 +1,4 @@
-import { AppInstallation, HasMetafields, MetafieldConnection, MetafieldIdentifierInput, MetafieldOwnerType, MetafieldsDeletePayload, MetafieldsSetInput, MetafieldsSetPayload } from "~/types/admin.types";
+import { AppInstallation, HasMetafields, MetafieldConnection, MetafieldDefinitionIdentifier, MetafieldIdentifierInput, MetafieldOwnerType, MetafieldsDeletePayload, MetafieldsSetInput, MetafieldsSetPayload } from "~/types/admin.types";
 import { FieldBuilder, QueryBuilder } from "raku-ql";
 import { FindOptions, PaginatedMetafields, PickedMetafield } from "~/types/metafield-repository";
 import { MetafieldDefinition } from "~/types/metafield-definitions";
@@ -8,6 +8,8 @@ import { doRequest } from "~/utils/request";
 import { SchemaProvider } from "~/provider/schema-provider";
 
 type MakeOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+type OnPopulateWithDefinition = (fieldDefinition: MetafieldDefinition, fieldBuilder: FieldBuilder) => void;
+type OnPopulateWithIdentifier = (identifier: MetafieldDefinitionIdentifier, fieldBuilder: FieldBuilder) => void;
 
 /**
  * Provide a thin wrapper around metafields to easily manipulate them
@@ -223,12 +225,13 @@ export class MetafieldRepository {
   /**
    * For reference metafields, set up the query to fetch the reference or references objects
    */
-  private setupReferenceQuery(opts: { fieldBuilder: FieldBuilder, ownerType: AllowRawEnum<MetafieldOwnerType>, key: string, namespace?: string }): void {
-    const metafieldDefinition = this.getMetafieldDefinition(opts.ownerType, opts.key, opts.namespace);
-
-    if (!metafieldDefinition) {
-
+  private setupReferenceQuery(opts: { fieldBuilder: FieldBuilder, ownerType: AllowRawEnum<MetafieldOwnerType>, key: string, namespace?: string, onPopulate?: OnPopulateWithDefinition }): void {
+    if (!SchemaProvider.hasMetafieldDefinition({ ownerType: opts.ownerType, key: opts.key, namespace: opts.namespace })) {
+      // If we don't have a definition, we can't know the type, so we just use the populate method
+      
     } else {
+      const metafieldDefinition = SchemaProvider.getMetafieldDefinitionEntry({ ownerType: opts.ownerType, key: opts.key, namespace: opts.namespace });
+
       // If we have a definition for this metafield, we know exactly the reference type so we can do an optimized query
       if (!metafieldDefinition.type.includes('_reference')) {
         return; // Not a reference metafield
@@ -237,26 +240,15 @@ export class MetafieldRepository {
       if (metafieldDefinition.type.startsWith('list.')) {
         opts.fieldBuilder.connection('references', { first: 50 }, references => {
           references.nodes(nodeBuilder => {
-            populateShopifyResourceReference({ fieldBuilder: nodeBuilder, fieldDefinition: metafieldDefinition });
+            populateShopifyResourceReference({ fieldBuilder: nodeBuilder, fieldDefinition: metafieldDefinition, onPopulate: opts.onPopulate });
           });
         });
       } else {
         opts.fieldBuilder.object('reference', nodeBuilder => {
-          populateShopifyResourceReference({ fieldBuilder: nodeBuilder, fieldDefinition: metafieldDefinition });
+          populateShopifyResourceReference({ fieldBuilder: nodeBuilder, fieldDefinition: metafieldDefinition, onPopulate: opts.onPopulate });
         })
       }
     }
-  }
-
-  /**
-   * Get the metafield definition entry (if it exists)
-   */
-  private getMetafieldDefinition(ownerType: string, key: string, namespace?: string): MetafieldDefinition | null {
-    const definition = SchemaProvider.metafieldDefinitions?.find(def => {
-      return def.key === key && def.ownerType === ownerType && (!namespace || def.namespace === namespace);
-    });
-
-    return definition || null;
   }
 }
 

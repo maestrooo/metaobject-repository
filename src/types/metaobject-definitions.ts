@@ -115,6 +115,23 @@ export type ValidPopulatePaths<D extends MetaobjectDefinitionSchema, T extends D
 //   • special FileMapping if file_reference + validations.fileTypeOptions
 // ──────────────────────────────────────────────────────────────────────
 
+type SystemData<D extends MetaobjectDefinitionSchema, T extends D[number]["type"], C extends boolean, Th extends boolean> = {
+  type: string;
+  id: string;
+  handle: string;
+  displayName: string;
+  updatedAt: Date;
+  /*createdAt: Date;*/
+}
+  // only add capabilities if C is true
+  & (C extends true
+      ? { capabilities: MetaobjectCapabilitiesFromDefinition<D, T> }
+      : {})
+  // only add thumbnail if Th is true
+  & (Th extends true
+      ? { thumbnail: MetaobjectThumbnail | null }
+      : {});
+
 export type FromDefinition<
   D extends MetaobjectDefinitionSchema,
   T extends D[number]["type"],
@@ -183,16 +200,9 @@ export type FromDefinition<
 export type FromDefinitionWithSystemData<
   D extends MetaobjectDefinitionSchema,
   T extends D[number]["type"],
-  P extends string = never
+  P extends string = never,
+  C extends boolean = false,
+  Th extends boolean = false
 > = FromDefinition<D, T, P> & {
-  readonly system: Readonly<{
-    type: string;
-    id: string;
-    handle: string;
-    displayName: string;
-    capabilities: MetaobjectCapabilitiesFromDefinition<D, T>;
-    /*createdAt: Date;*/
-    updatedAt: Date;
-    thumbnail: MetaobjectThumbnail | null;
-  }>
+  readonly system: Readonly<SystemData<D, T, C, Th>>;
 }

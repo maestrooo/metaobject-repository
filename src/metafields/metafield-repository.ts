@@ -1,11 +1,13 @@
-import { AppInstallation, HasMetafields, MetafieldConnection, MetafieldIdentifierInput, MetafieldOwnerType, MetafieldsDeletePayload, MetafieldsSetInput, MetafieldsSetPayload } from "~/types/admin.types";
+import { AppInstallation, HasMetafields, Metafield, MetafieldConnection, MetafieldIdentifierInput, MetafieldOwnerType, MetafieldsDeletePayload, MetafieldsSetInput, MetafieldsSetPayload } from "~/types/admin.types";
 import { FieldBuilder, QueryBuilder } from "raku-ql";
-import { FindOptions, PaginatedMetafields, PaginatedMetafieldsWithReference, PickedMetafield, PickedMetafieldWithReference } from "~/types/metafield-repository";
+import { FindOptions, LooseMetafieldsSetInput, PaginatedMetafields, PaginatedMetafieldsWithReference, PickedMetafield, PickedMetafieldWithReference } from "~/types/metafield-repository";
 import { AllowRawEnum, MakeOptional } from "~/types/utils";
 import { OnPopulateFunc, OnPopulateWithoutDefinitionFunc, populateReferenceQuery } from "~/utils/builder";
 import { ConnectionOptions, doRequest } from "~/utils/request";
 import { MetafieldDefinitionSchema } from "~/types/metafield-definitions";
 import { MetaobjectDefinitionSchema } from "~/types/metaobject-definitions";
+import { serializeValue } from "~/transformer/serializer";
+import { deserializeMetafield } from "~/transformer/deserializer";
 
 type ConstructorOptions = {
   connection: ConnectionOptions;
@@ -55,7 +57,9 @@ export class MetafieldRepository {
 
     const variables = { key: opts.key, namespace: opts.namespace };
 
-    return (await ((await doRequest({ connection: this.connection, builder, variables })).json())).data.currentAppInstallation.metafield;
+    const metafield = (await ((await doRequest({ connection: this.connection, builder, variables })).json())).data.currentAppInstallation.metafield;
+
+    return metafield ? deserializeMetafield(metafield) : null;
   }
 
   /**
@@ -95,7 +99,10 @@ export class MetafieldRepository {
 
     const { nodes: items, pageInfo } = (await ((await doRequest({ connection: this.connection, builder, variables })).json())).data.currentAppInstallation.metafields;
 
-    return { pageInfo, items };
+    return {
+      pageInfo,
+      items: items.map((metafield: Metafield) => deserializeMetafield(metafield))
+    }
   }
 
   /**
@@ -147,7 +154,7 @@ export class MetafieldRepository {
     const variables = { id: opts.owner, namespace: opts.namespace, key: opts.key };
     const { metafield } = (await ((await doRequest({ connection: this.connection, builder, variables })).json())).data[operationName];
 
-    return metafield;
+    return metafield ? deserializeMetafield(metafield) : null;
   }
 
   /**
@@ -185,27 +192,37 @@ export class MetafieldRepository {
 
     const { nodes: items, pageInfo } = (await ((await doRequest({ connection: this.connection, builder, variables })).json())).data.metafields;
 
-    return { pageInfo, items };
+    return {
+      pageInfo,
+      items: items.map((metafield: Metafield) => deserializeMetafield(metafield))
+    }
   }
 
   /**
    * Helper to create app metafields. You don't need to explicitly pass the owner ID, as it is retrieved
    * automatically from the current app installation.
    */
-  async setAppMetafields(input: MakeOptional<MetafieldsSetInput, 'ownerId'>[]): Promise<void> {
+  async setAppMetafields(input: Omit<LooseMetafieldsSetInput, 'ownerId'>[]): Promise<void> {
     const appInstallationId = await this.getAppInstallationId();
+    
+    const metafieldsSet: LooseMetafieldsSetInput[] = input.map(metafield => ({
+      ...metafield,
+      ownerId: appInstallationId
+    }));
 
-    input.forEach((item) => {
-      item.ownerId = appInstallationId;
-    });
-
-    await this.setMetafields(input as MetafieldsSetInput[]);
+    await this.setMetafields(metafieldsSet);
   }
 
   /**
    * Upsert one or multiple metafields
    */
-  async setMetafields(input: MetafieldsSetInput[]): Promise<void> {
+  async setMetafields(input: LooseMetafieldsSetInput[]): Promise<void> {
+    // Our loose metafields don't have the value serialized as JSON, so we do that. We also snake_case the keys
+    const metafieldsSet: MetafieldsSetInput[] = input.map(metafield => ({
+      ...metafield,
+      value: serializeValue(metafield.value)
+    }));
+
     const builder = QueryBuilder.mutation('SetMetafields')
       .variables({ metafields: '[MetafieldsSetInput!]!' })
       .operation<MetafieldsSetPayload>('metafieldsSet', { metafields: '$metafields' }, metafieldsSet => {
@@ -218,7 +235,7 @@ export class MetafieldRepository {
           });
       })
 
-    const { userErrors } = (await (await doRequest({ connection: this.connection, builder, variables: { metafields: input } })).json()).data.metafieldsSet;
+    const { userErrors } = (await (await doRequest({ connection: this.connection, builder, variables: { metafields: metafieldsSet } })).json()).data.metafieldsSet;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);

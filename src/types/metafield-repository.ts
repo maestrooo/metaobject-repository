@@ -1,9 +1,15 @@
 import { OnPopulateWithoutDefinitionFunc } from "~/utils/builder";
-import { Metafield, PageInfo } from "./admin.types";
+import { Metafield, MetafieldsSetInput, PageInfo } from "./admin.types";
 import { PaginationArgs } from "./utils";
 
 export type PickedMetafield = Pick<Metafield, 'id' | 'compareDigest' | 'type' | 'namespace' | 'key' | 'jsonValue'>;
 export type PickedMetafieldWithReference<T> = PickedMetafield & { reference?: T; references?: T[] };
+
+// To make it easier to work with metafields, we allow passign any kind of value for the `value`, and then we serialize
+// it to the correct type
+export type LooseMetafieldsSetInput = Omit<MetafieldsSetInput, 'value'> & {
+  value: any
+}
 
 type CommonFindOptions = {
   owner: string;

@@ -37,14 +37,22 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
   /**
    * Find a metaobject by its ID
    */
-  async findById<P extends ValidPopulatePaths<D, T> = never>(
+  async findById<P extends ValidPopulatePaths<D, T> = never, C extends boolean = false, Th extends boolean = false>(
     id: string,
-    opts?: PopulateOptions<P>
-  ): Promise<FromDefinitionWithSystemData<D, T, P> | null> {
+    opts?: PopulateOptions<P, C, Th>
+  ): Promise<FromDefinitionWithSystemData<D, T, P, C, Th> | null> {
     const builder = QueryBuilder.query('GetMetaobject')
       .variables({ id: 'ID!' })
       .operation<Metaobject>('metaobject', { 'id': '$id' }, (metaobjectBuilder) => {
-        populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: metaobjectBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
+        populateMetaobjectQuery({ 
+          metaobjectDefinitions: this.metaobjectDefinitions, 
+          metaobjectType: this.type, 
+          fieldBuilder: metaobjectBuilder, 
+          includeCapabilities: opts?.includeCapabilities,
+          includeThumbnail: opts?.includeThumbnail,
+          populate: opts?.populate || [], 
+          onPopulate: opts?.onPopulate
+        });
       });
     
     const variables = { id: this.transformId(id) };
@@ -56,10 +64,10 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
   /**
    * Find a metaobject by its ID or throw an error if not found
    */
-  async findByIdOrFail<P extends ValidPopulatePaths<D, T> = never>(
+  async findByIdOrFail<P extends ValidPopulatePaths<D, T> = never, C extends boolean = false, Th extends boolean = false>(
     id: string,
-    opts?: PopulateOptions<P>
-  ): Promise<FromDefinitionWithSystemData<D, T, P>> {
+    opts?: PopulateOptions<P, C, Th>
+  ): Promise<FromDefinitionWithSystemData<D, T, P, C, Th>> {
     const metaobject = await this.findById(id, opts);
 
     if (!metaobject) {
@@ -72,14 +80,22 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
   /**
    * Find a metaobject by handle
    */
-  async findByHandle<P extends ValidPopulatePaths<D, T> = never>(
+  async findByHandle<P extends ValidPopulatePaths<D, T> = never, C extends boolean = false, Th extends boolean = false>(
     handle: string,
-    opts?: PopulateOptions<P>
-  ): Promise<FromDefinitionWithSystemData<D, T, P> | null> {
+    opts?: PopulateOptions<P, C, Th>
+  ): Promise<FromDefinitionWithSystemData<D, T, P, C, Th> | null> {
     const builder = QueryBuilder.query('GetMetaobjectByHandle')
       .variables({ handle: 'MetaobjectHandleInput!' })
       .operation<Metaobject>('metaobjectByHandle', { 'handle': '$handle' }, (metaobjectBuilder) => {
-        populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: metaobjectBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
+        populateMetaobjectQuery({ 
+          metaobjectDefinitions: this.metaobjectDefinitions, 
+          metaobjectType: this.type, 
+          fieldBuilder: metaobjectBuilder, 
+          includeCapabilities: opts?.includeCapabilities,
+          includeThumbnail: opts?.includeThumbnail,
+          populate: opts?.populate || [], 
+          onPopulate: opts?.onPopulate
+        });
       });
 
     const variables = { handle: { handle, type: this.type } };
@@ -91,10 +107,10 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
   /**
    * Find a metaobject by its handle or throw an error if not found
    */
-  async findByHandleOrFail<P extends ValidPopulatePaths<D, T> = never>(
+  async findByHandleOrFail<P extends ValidPopulatePaths<D, T> = never, C extends boolean = false, Th extends boolean = false>(
     handle: string,
-    opts?: PopulateOptions<P>
-  ): Promise<FromDefinitionWithSystemData<D, T, P>> {
+    opts?: PopulateOptions<P, C, Th>
+  ): Promise<FromDefinitionWithSystemData<D, T, P, C, Th>> {
     const metaobject = await this.findByHandle(handle, opts);
 
     if (!metaobject) {
@@ -107,9 +123,9 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
   /**
    * Find all metaobjects (this endpoint does not support pagination and just set a max limit of 250)
    */
-  async findAll<P extends ValidPopulatePaths<D, T> = never>(
-    opts?: PopulateOptions<P> & { sortKey?: SortKey, limit?: number }
-  ): Promise<FromDefinitionWithSystemData<D, T, P>[]> {
+  async findAll<P extends ValidPopulatePaths<D, T> = never, C extends boolean = false, Th extends boolean = false>(
+    opts?: PopulateOptions<P, C, Th> & { sortKey?: SortKey, limit?: number }
+  ): Promise<FromDefinitionWithSystemData<D, T, P, C, Th>[]> {
     const connectionParameters = {
       type: this.type,
       first: opts?.limit || 250,
@@ -119,7 +135,15 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
     const builder = QueryBuilder.query('GetMetaobjects')
       .connection('metaobjects', connectionParameters, (connection) => {
         connection.object('nodes', (nodesBuilder) => {
-          populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: nodesBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
+          populateMetaobjectQuery({ 
+            metaobjectDefinitions: this.metaobjectDefinitions, 
+            metaobjectType: this.type, 
+            fieldBuilder: nodesBuilder, 
+            includeCapabilities: opts?.includeCapabilities,
+            includeThumbnail: opts?.includeThumbnail,
+            populate: opts?.populate || [], 
+            onPopulate: opts?.onPopulate
+          });
         });
       });
 
@@ -131,7 +155,9 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
   /**
    * Return a list of paginated metaobjects
    */
-  async find<P extends ValidPopulatePaths<D, T> = never>(opts: FindOptions & PopulateOptions<P>): Promise<PaginatedMetaobjects<D, T, P>> {
+  async find<P extends ValidPopulatePaths<D, T> = never, C extends boolean = false, Th extends boolean = false>(
+    opts: FindOptions & PopulateOptions<P, C, Th>
+  ): Promise<PaginatedMetaobjects<D, T, P, C, Th>> {
     const connectionParameters = {
       type: this.type,
       first: ('after' in opts) ? (opts.first || 50) : undefined,
@@ -150,7 +176,15 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
     const builder = QueryBuilder.query('GetMetaobjects')
       .connection('metaobjects', connectionParameters, (connection) => {
         connection.object('nodes', (nodesBuilder) => {
-          populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: nodesBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
+          populateMetaobjectQuery({ 
+            metaobjectDefinitions: this.metaobjectDefinitions, 
+            metaobjectType: this.type, 
+            fieldBuilder: nodesBuilder, 
+            includeCapabilities: opts?.includeCapabilities,
+            includeThumbnail: opts?.includeThumbnail,
+            populate: opts?.populate || [], 
+            onPopulate: opts?.onPopulate
+          });
         });
       });
 
@@ -171,16 +205,24 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
   /** 
    * Create a new object, typed by your definitions 
    */
-  async create<P extends ValidPopulatePaths<D, T> = never>(
+  async create<P extends ValidPopulatePaths<D, T> = never, C extends boolean = false, Th extends boolean = false>(
     input: CreateInput<D, T>, 
-    opts?: PopulateOptions<P>
-  ): Promise<FromDefinitionWithSystemData<D, T, P>> {
+    opts?: PopulateOptions<P, C, Th>
+  ): Promise<FromDefinitionWithSystemData<D, T, P, C, Th>> {
     const builder = QueryBuilder.mutation('CreateMetaobject')
       .variables({ metaobject: 'MetaobjectCreateInput!' })
       .operation<MetaobjectCreatePayload>('metaobjectCreate', { metaobject: '$metaobject' }, (metaobjectCreate) => {
         metaobjectCreate
           .object('metaobject', (metaobjectBuilder) => {
-            populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: metaobjectBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
+            populateMetaobjectQuery({ 
+              metaobjectDefinitions: this.metaobjectDefinitions, 
+              metaobjectType: this.type, 
+              fieldBuilder: metaobjectBuilder, 
+              includeCapabilities: opts?.includeCapabilities,
+              includeThumbnail: opts?.includeThumbnail,
+              populate: opts?.populate || [], 
+              onPopulate: opts?.onPopulate
+            });
           })
           .object('userErrors', (userErrors) => {
             userErrors.fields('code', 'field', 'message');
@@ -207,10 +249,10 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
   /** 
    * Create a list of new objects, typed by your definitions 
    */
-  async createMany<P extends ValidPopulatePaths<D, T> = never>(
+  async createMany<P extends ValidPopulatePaths<D, T> = never, C extends boolean = false, Th extends boolean = false>(
     input: CreateInput<D, T>[], 
-    opts?: PopulateOptions<P>
-  ): Promise<FromDefinitionWithSystemData<D, T, P>[]> {
+    opts?: PopulateOptions<P, C, Th>
+  ): Promise<FromDefinitionWithSystemData<D, T, P, C, Th>[]> {
     if (input.length > 25) {
       throw new Error('You can only create a maximum of 25 metaobjects at once');
     }
@@ -220,7 +262,15 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       .operation<MetaobjectsCreatePayload>('metaobjectsCreate', { input: '$input' }, (metaobjectsCreate) => {
         metaobjectsCreate
           .object('metaobjects', (metaobjectsBuilder) => {
-            populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: metaobjectsBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
+            populateMetaobjectQuery({ 
+              metaobjectDefinitions: this.metaobjectDefinitions, 
+              metaobjectType: this.type, 
+              fieldBuilder: metaobjectsBuilder, 
+              includeCapabilities: opts?.includeCapabilities,
+              includeThumbnail: opts?.includeThumbnail,
+              populate: opts?.populate || [], 
+              onPopulate: opts?.onPopulate
+            });
           })
           .object('userErrors', (userErrors) => {
             userErrors.fields('code', 'field', 'message');
@@ -251,16 +301,24 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
   /**
    * Update an existing object, typed by your definitions 
    */
-  async update<P extends ValidPopulatePaths<D, T> = never>(
+  async update<P extends ValidPopulatePaths<D, T> = never, C extends boolean = false, Th extends boolean = false>(
     input: UpdateInput<D, T>, 
-    opts?: PopulateOptions<P>
-  ): Promise<FromDefinitionWithSystemData<D, T, P>> {
+    opts?: PopulateOptions<P, C, Th>
+  ): Promise<FromDefinitionWithSystemData<D, T, P, C, Th>> {
     const builder = QueryBuilder.mutation('UpdateMetaobject')
       .variables({ id: 'ID!', metaobject: 'MetaobjectUpdateInput!' })
       .operation<MetaobjectUpdatePayload>('metaobjectUpdate', { id: '$id', metaobject: '$metaobject' }, (metaobjectUpdate) => {
         metaobjectUpdate
           .object('metaobject', (metaobjectBuilder) => {
-            populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: metaobjectBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
+            populateMetaobjectQuery({ 
+              metaobjectDefinitions: this.metaobjectDefinitions, 
+              metaobjectType: this.type, 
+              fieldBuilder: metaobjectBuilder, 
+              includeCapabilities: opts?.includeCapabilities,
+              includeThumbnail: opts?.includeThumbnail,
+              populate: opts?.populate || [], 
+              onPopulate: opts?.onPopulate
+            });
           })
           .object('userErrors', (userErrors) => {
             userErrors.fields('code', 'field', 'message');
@@ -289,16 +347,24 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
   /** 
    * Upsert an existing object, typed by your definitions 
    */
-  async upsert<P extends ValidPopulatePaths<D, T> = never>(
+  async upsert<P extends ValidPopulatePaths<D, T> = never, C extends boolean = false, Th extends boolean = false>(
     input: UpsertInput<D, T>, 
-    opts?: PopulateOptions<P>
-  ): Promise<FromDefinitionWithSystemData<D, T, P>> {
+    opts?: PopulateOptions<P, C, Th>
+  ): Promise<FromDefinitionWithSystemData<D, T, P, C, Th>> {
     const builder = QueryBuilder.mutation('UpsertMetaobject')
       .variables({ handle: 'MetaobjectHandleInput!', metaobject: 'MetaobjectUpsertInput!' })
       .operation<MetaobjectUpsertPayload>('metaobjectUpsert', { handle: '$handle', metaobject: '$metaobject' }, (metaobjectUpsert) => {
         metaobjectUpsert
           .object('metaobject', (metaobjectBuilder) => {
-            populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: metaobjectBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
+            populateMetaobjectQuery({ 
+              metaobjectDefinitions: this.metaobjectDefinitions, 
+              metaobjectType: this.type, 
+              fieldBuilder: metaobjectBuilder, 
+              includeCapabilities: opts?.includeCapabilities,
+              includeThumbnail: opts?.includeThumbnail,
+              populate: opts?.populate || [], 
+              onPopulate: opts?.onPopulate
+            });
           })
           .object('userErrors', (userErrors) => {
             userErrors.fields('code', 'field', 'message');

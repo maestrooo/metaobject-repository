@@ -1,9 +1,21 @@
+## 0.17.0
+
+- [BC] After performance testing, including capabilities and thumbnails (especially on list) can be quite costly. When fetching your own metaobjects,
+this is now disabled by default. You must use the new `includeCapabilities` and `includeThumbnail` to get them.
+- Metafields JSON values are now camelCased when retrieved, and snake_case before being saved.
+- Metafields referencing metaobjects are now serialized as per the schema.
+
+## 0.16.1
+
+- Ensure the direct access set the same API version.
+
 ## 0.16.0
 
 - Added a new `metafieldDefinitionManager`. Similar to the `metaobjectDefinitionManager`, it allows to create metafield definitions automatically.
 - Added a new `deleteDefinition` on the `metaobjectDefinitionManager`.
 - Improve the `getAppMetafield`, `getMetafield`, `getMetafields` and `getMetafield` to fetch reference.
 - The `createDefinition` method on the manager will now throw a `DefinitionTakenException` if the definition already exists, allowing to more easily categorize errors.
+- Added support for direct access.
 - [BC] Rename the `definitionManager`, `DefinitionManager` and `DefinitionRepository` to `metaobjectDefinitionManager`, `MetaobjectDefinitionManager` and `MetaobjectDefinitionRepository`, respectively.
 - [BC] Rename the `DefinitionSchema` type to `MetaobjectDefinitionSchema`.
 - [BC] I'm reverting the changes done in 0.13.0 and merge back again all methods from the metaobject definition repository back to the metaobject definition manager. Splitting into two made the usage more confusing than needed.

@@ -160,7 +160,7 @@ export class MetaobjectDefinitionManager {
 
     const { metaobjectDefinitionByType } = (await (await doRequest({ connection: this.connection, builder, variables: { type } })).json()).data;
 
-    return metaobjectDefinitionByType.id;
+    return metaobjectDefinitionByType?.id ?? null;
   }
 
   /**
@@ -171,7 +171,7 @@ export class MetaobjectDefinitionManager {
       .variables({ type: 'String!' })
       .operation<MetaobjectDefinition>('metaobjectDefinitionByType', { type: '$type' }, metaobjectDefinition => {
         metaobjectDefinition
-          .fields('id', 'type', 'name', 'description', /*'createdAt',*/ 'updatedAt', 'displayNameKey', 'hasThumbnailField', 'metaobjectsCount')
+          .fields('id', 'type', 'name', 'description', /*'createdAt', 'updatedAt',*/ 'displayNameKey', 'hasThumbnailField', 'metaobjectsCount')
           .object('access', access => {
             access.fields('admin', 'storefront');
           })

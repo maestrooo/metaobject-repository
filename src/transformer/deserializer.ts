@@ -1,7 +1,40 @@
 import { toCamel, camel } from "snake-camel";
-import { Metaobject } from "~/types/admin.types";
+import { Metafield, Metaobject } from "~/types/admin.types";
 
-export function deserialize<T>(metaobject: Metaobject): T {
+function deserializeReference(valueForKey: any): any {
+  if (valueForKey?.['__typename'] === 'Metaobject') {
+    return deserializeMetaobject(valueForKey);
+  } else {
+    return valueForKey;
+  }
+}
+
+/**
+ * Deserialize a metafield. It will convert jsonValue to camelCase and resolve the references
+ */
+export function deserializeMetafield(metafield: Metafield): any {
+  const data: any = metafield;
+
+  if (Array.isArray(data.jsonValue)) {
+    data.jsonValue = data.jsonValue.map(toCamel);
+  } else if (typeof data.jsonValue === 'object') {
+    data.jsonValue = toCamel(data.jsonValue);
+  }
+  
+  // Handle the references
+  if (data.hasOwnProperty('reference') && data['reference'] !== null) {
+    data['reference'] = deserializeReference(data['reference']);
+  } else if (data.hasOwnProperty('references') && data['references'] !== null) {
+    data['references'] = data?.['references']?.['nodes']?.map(deserializeReference) ?? [];
+  }
+
+  return data;
+}
+
+/**
+ * Deserialize a metaobject. This automatically camelCase all keys and fill the references
+ */
+export function deserializeMetaobject<T>(metaobject: Metaobject): T {
   let data: { [key: string]: any } = {
     system: {
       id: metaobject.id,
@@ -11,7 +44,7 @@ export function deserialize<T>(metaobject: Metaobject): T {
       /*createdAt: new Date(metaobject.createdAt),*/
       updatedAt: new Date(metaobject.updatedAt),
       capabilities: metaobject.capabilities ?? {},
-      thumbnailField: metaobject.thumbnailField?.thumbnail ?? null
+      thumbnailField: metaobject?.thumbnailField?.thumbnail ?? null
     }
   }
 
@@ -43,20 +76,12 @@ export function deserialize<T>(metaobject: Metaobject): T {
     const keyName = key.substring(1);
     const valueForKey = metaobject[key];
 
-    const serializeReference = (valueForKey: any) => {
-      if (valueForKey?.['__typename'] === 'Metaobject') {
-        return deserialize(valueForKey);
-      } else {
-        return valueForKey;
-      }
-    }
-
     if (valueForKey === null) {
       // In case of mixed references some references might not exist on a given type, so we simply ignore
     } else if (valueForKey.hasOwnProperty('reference')) {
-      data[keyName] = serializeReference(valueForKey['reference']);
+      data[keyName] = deserializeReference(valueForKey['reference']);
     } else if (valueForKey.hasOwnProperty('references')) {
-      data[keyName] = valueForKey['references']?.['nodes'].map(serializeReference) ?? [];
+      data[keyName] = valueForKey['references']?.['nodes'].map(deserializeReference) ?? [];
     }
   }
 

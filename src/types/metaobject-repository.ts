@@ -96,7 +96,9 @@ export type UpsertInput<D extends MetaobjectDefinitionSchema, T extends D[number
  * --------------------------------------------------------------------------------------------
  */
 
-export type PopulateOptions<P> = {
+export type PopulateOptions<P, C extends boolean = false, Th extends boolean = false> = {
+  includeCapabilities?: C;
+  includeThumbnail?: Th;
   populate?: readonly P[];
   onPopulate?: OnPopulateFunc;
 }
@@ -113,9 +115,9 @@ type CommonFindOptions = {
 // Union forces “at least one of first|last” and applies the mutual-exclusion rules
 export type FindOptions = CommonFindOptions & (PaginationArgs<"forward"> | PaginationArgs<"backward">);
 
-export type PaginatedMetaobjects<D extends MetaobjectDefinitionSchema, T extends D[number]["type"], P extends ValidPopulatePaths<D, T> = never> = {
+export type PaginatedMetaobjects<D extends MetaobjectDefinitionSchema, T extends D[number]["type"], P extends ValidPopulatePaths<D, T> = never, C extends boolean = false, Th extends boolean = false> = {
   pageInfo: PageInfo, 
-  items: FromDefinitionWithSystemData<D, T, P>[] 
+  items: FromDefinitionWithSystemData<D, T, P, C, Th>[] 
 }
 
 /**

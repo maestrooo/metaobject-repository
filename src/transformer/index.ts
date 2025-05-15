@@ -1,2 +1,2 @@
 export { serializeFields } from "./serializer";
-export { deserialize } from "./deserializer";
+export { deserializeMetaobject as deserialize } from "./deserializer";

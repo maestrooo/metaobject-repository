@@ -14,6 +14,8 @@ npm install metaobject-repository
 
 ## 🚀 Quick Start
 
+### Metaobjects
+
 A minimal example to define a schema, create a metaobject, and delete it.
 
 ```ts
@@ -36,21 +38,20 @@ export const definitions = [
     ]
   }
 ] as const satisfies MetaobjectDefinitionSchema;
-
-export const eventRepository = new MetaobjectRepository(definitions, "$app:event");
 ```
 
 ```ts
 // loader.ts
 import { eventRepository, definitions } from "./definitions";
-import { definitionManager } from "metaobject-repository";
+import { createContext } from "metaobject-repository";
 
-export async function setup(client: any) {
-  definitionManager.withClient(client);
-  eventRepository.withClient(client);
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+  
+  const { eventRepository, metaobjectDefinitionManager } = createContext({ admin.graphql });
 
   // Create the schema on Shopify (dependencies between schemas are automatically resolved)
-  await definitionManager.createFromSchema(definitions);
+  await metaobjectDefinitionManager.createFromSchema();
 
   // Create an object, and populate the banner to fill references
   const event = await eventRepository.create({
@@ -60,6 +61,46 @@ export async function setup(client: any) {
 
   // Delete the object
   await eventRepository.delete(event.system.id);
+}
+```
+
+### Metafields
+
+A minimal example to define a schema, create a metafield, and delete it.
+
+```ts
+// definitions.ts
+import { MetafieldDefinitionSchema, MetafieldRepository } from "metaobject-repository";
+
+export const definitions = [
+  {
+    type: "single_line_text_field",
+    name: "Event",
+    key: "event",
+    namespace: "test"
+  }
+] as const satisfies MetafieldDefinitionSchema;
+```
+
+```ts
+// loader.ts
+import { eventRepository, definitions } from "./definitions";
+import { createContext } from "metaobject-repository";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { admin } = await authenticate.admin(request);
+  
+  const { metafieldRepository, metafieldDefinitionManager } = createContext({ admin.graphql });
+
+  // Create the schema on Shopify (dependencies between schemas are automatically resolved)
+  await metafieldDefinitionManager.createFromSchema();
+
+  // Create a metafield
+  await metafieldRepository.setMetafields([
+    { key: 'event', namespace: 'test', ownerId: 'gid://shopify/Product/123', value: 'something' }
+  ])
+  
+  await metafieldRepository.delete({ key: 'event', namespace: 'test', ownerId: 'gid://shopify/Product/123' });
 }
 ```
 

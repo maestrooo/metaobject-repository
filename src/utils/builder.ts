@@ -11,6 +11,8 @@ type PopulateMetaobjectQueryOptions = {
   metaobjectDefinitions: MetaobjectDefinitionSchema;
   metaobjectType: string;
   fieldBuilder: FieldBuilder;
+  includeCapabilities?: boolean;
+  includeThumbnail?: boolean;
   populate: readonly string[];
   onPopulate?: OnPopulateFunc;
 }
@@ -89,7 +91,7 @@ export function populateReferenceQuery({ metaobjectDefinitions, fieldDefinition,
 /**
  * Populate a metaobject query (this is used to populate metaobject owned by the app itself), whose type is metaobjectType
  */
-export function populateMetaobjectQuery({ metaobjectDefinitions, metaobjectType, fieldBuilder, populate, onPopulate }: PopulateMetaobjectQueryOptions): FieldBuilder {
+export function populateMetaobjectQuery({ metaobjectDefinitions, metaobjectType, fieldBuilder, includeCapabilities, includeThumbnail, populate, onPopulate }: PopulateMetaobjectQueryOptions): FieldBuilder {
   const schema = getMetaobjectDefinitionEntry(metaobjectDefinitions, metaobjectType);
 
   // We setup the base fields
@@ -100,7 +102,7 @@ export function populateMetaobjectQuery({ metaobjectDefinitions, metaobjectType,
     });
 
   // We get the capabilities only if the definition contains some
-  if (schema.capabilities?.publishable || schema.capabilities?.onlineStore) {
+  if (includeCapabilities && (schema.capabilities?.publishable || schema.capabilities?.onlineStore)) {
     fieldBuilder.object('capabilities', (capabilities) => {
       if (schema.capabilities?.publishable) {
         capabilities.object('publishable', (publishable) => {
@@ -119,7 +121,7 @@ export function populateMetaobjectQuery({ metaobjectDefinitions, metaobjectType,
   // We only include the thumbnail field if the schema contains one file reference or one color field
   const hasThumbnailField = schema.fields.some(field => field.type.includes('file_reference') || field.type.includes('color'));
 
-  if (hasThumbnailField) {
+  if (includeThumbnail && hasThumbnailField) {
     fieldBuilder.object('thumbnailField', (thumbnailField) => {
       thumbnailField.object('thumbnail', (thumbnail) => {
         thumbnail

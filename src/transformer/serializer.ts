@@ -1,5 +1,5 @@
 import { toSnake, snake } from 'snake-camel';
-import { MetaobjectFieldInput } from '~/types/admin.types';
+import type { MetaobjectFieldInput } from '~/types/admin.types';
 
 /**
  * Serialize a single value to the format suitable for Shopify

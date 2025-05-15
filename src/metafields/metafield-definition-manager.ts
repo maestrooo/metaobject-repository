@@ -1,14 +1,14 @@
 import { QueryBuilder } from "raku-ql";
-import { 
+import type { 
   MetafieldAccessInput, MetafieldDefinitionCreatePayload, MetafieldDefinitionDeletePayload, MetafieldDefinitionIdentifier, 
   MetafieldDefinitionInput, MetafieldDefinitionPinPayload, MetafieldDefinitionUnpinPayload, MetafieldDefinitionUpdateInput, 
   MetafieldDefinitionUpdatePayload, MetafieldOwnerType 
 } from "~/types/admin.types";
 import { DefinitionTakenException } from "~/exception";
 import { convertValidations } from "~/utils/metafield-validations";
-import { ConnectionOptions, doRequest } from "~/utils/request";
+import { type ConnectionOptions, doRequest } from "~/utils/request";
 import { MetaobjectDefinitionManager } from "~/metaobjects/metaobject-definition-manager";
-import { MetafieldDefinitionSchema } from "~/types/metafield-definitions";
+import type { MetafieldDefinitionSchema } from "~/types/metafield-definitions";
 
 type ConstructorOptions = {
   connection: ConnectionOptions;

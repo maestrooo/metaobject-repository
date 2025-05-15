@@ -1,6 +1,7 @@
-import { MetafieldAccessInput, MetafieldCapabilityCreateInput, MetafieldDefinitionConstraintsInput, MetafieldOwnerType } from "./admin.types";
-import { FieldType, FieldValidations } from "./fields";
-import { AllowRawEnum } from "./utils";
+import type { MetafieldAccessInput, MetafieldCapabilityCreateInput, MetafieldDefinitionConstraintsInput } from "./admin.types";
+import { MetafieldOwnerType } from "./admin.types";
+import type { FieldType, FieldValidations } from "./fields";
+import type { AllowRawEnum } from "./utils";
 
 export type MetafieldDefinitionMap = {
   [T in FieldType]: {

@@ -14,7 +14,7 @@ export { NotFoundException, UserErrorsException, DefinitionTakenException } from
 export { flattenFields } from './utils/flatten';
 export { fieldsDifference } from './utils/difference';
 export { extractFindParams } from './utils/params';
-export { OnPopulateFunc, OnPopulateWithoutDefinitionFunc } from './utils/builder';
-export { ConnectionOptions } from './utils/request';
+export type { OnPopulateFunc, OnPopulateWithoutDefinitionFunc } from './utils/builder';
+export type { ConnectionOptions } from './utils/request';
 
 export { createContext } from './create-context';

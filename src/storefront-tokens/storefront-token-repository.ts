@@ -1,6 +1,6 @@
 import { QueryBuilder } from "raku-ql";
-import { Shop, StorefrontAccessToken, StorefrontAccessTokenCreatePayload, StorefrontAccessTokenDeletePayload } from "~/types/admin.types";
-import { ConnectionOptions, doRequest } from "~/utils/request";
+import type { Shop, StorefrontAccessToken, StorefrontAccessTokenCreatePayload, StorefrontAccessTokenDeletePayload } from "~/types/admin.types";
+import { type ConnectionOptions, doRequest } from "~/utils/request";
 
 type PickedStorefrontAccessToken = Pick<StorefrontAccessToken, 'id' | 'accessToken' | 'title'>;
 

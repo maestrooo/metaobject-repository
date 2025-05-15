@@ -3,10 +3,10 @@ import { MetafieldRepository } from "./metafields/metafield-repository";
 import { MetaobjectDefinitionManager } from "./metaobjects/metaobject-definition-manager";
 import { MetaobjectRepository } from "./metaobjects/metaobject-repository";
 import { StorefrontTokenRepository } from "./storefront-tokens/storefront-token-repository";
-import { MetafieldDefinitionSchema } from "./types/metafield-definitions";
-import { MetaobjectDefinitionSchema } from "./types/metaobject-definitions";
-import { CamelCase } from "./types/utils";
-import { ConnectionOptions } from "./utils/request";
+import type { MetafieldDefinitionSchema } from "./types/metafield-definitions";
+import type { MetaobjectDefinitionSchema } from "./types/metaobject-definitions";
+import type { CamelCase } from "./types/utils";
+import type { ConnectionOptions } from "./utils/request";
 
 type CreateContextOptions<MOD extends MetaobjectDefinitionSchema, MFD extends MetafieldDefinitionSchema> = {
   connection: ConnectionOptions;
@@ -33,7 +33,6 @@ export type AppContext<MOD extends MetaobjectDefinitionSchema, MFD extends Metaf
   storefrontTokenRepository: StorefrontTokenRepository;
   metafieldRepository: MetafieldRepository;
 } & MetaobjectRepositories<MOD>;
-
 
 // 5. The implementation
 export function createContext<MOD extends MetaobjectDefinitionSchema, MFD extends MetafieldDefinitionSchema> (

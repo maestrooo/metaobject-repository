@@ -2,8 +2,8 @@
 // validations, to make it easier to use. This method is used to convert our own internal validation structure to Shopify one
 
 import { snake } from "snake-camel";
-import { MetafieldDefinitionValidationInput } from "~/types/admin.types";
-import { FieldType, FieldValidations } from "~/types/fields";
+import type { MetafieldDefinitionValidationInput } from "~/types/admin.types";
+import type { FieldType, FieldValidations } from "~/types/fields";
 
 export function convertValidations<T extends FieldType>(fieldValidations: FieldValidations<T>): MetafieldDefinitionValidationInput[] {
   const out: MetafieldDefinitionValidationInput[] = [];

@@ -1,11 +1,12 @@
-import { AppInstallation, HasMetafields, Metafield, MetafieldConnection, MetafieldIdentifierInput, MetafieldOwnerType, MetafieldsDeletePayload, MetafieldsSetInput, MetafieldsSetPayload } from "~/types/admin.types";
+import type { AppInstallation, HasMetafields, Metafield, MetafieldConnection, MetafieldIdentifierInput, MetafieldsDeletePayload, MetafieldsSetInput, MetafieldsSetPayload } from "~/types/admin.types";
+import { MetafieldOwnerType } from "~/types/admin.types";
 import { FieldBuilder, QueryBuilder } from "raku-ql";
-import { FindOptions, LooseMetafieldsSetInput, PaginatedMetafields, PaginatedMetafieldsWithReference, PickedMetafield, PickedMetafieldWithReference } from "~/types/metafield-repository";
-import { AllowRawEnum, MakeOptional } from "~/types/utils";
-import { OnPopulateFunc, OnPopulateWithoutDefinitionFunc, populateReferenceQuery } from "~/utils/builder";
-import { ConnectionOptions, doRequest } from "~/utils/request";
-import { MetafieldDefinitionSchema } from "~/types/metafield-definitions";
-import { MetaobjectDefinitionSchema } from "~/types/metaobject-definitions";
+import type { FindOptions, LooseMetafieldsSetInput, PaginatedMetafields, PaginatedMetafieldsWithReference, PickedMetafield, PickedMetafieldWithReference } from "~/types/metafield-repository";
+import type { AllowRawEnum } from "~/types/utils";
+import { type OnPopulateFunc, type OnPopulateWithoutDefinitionFunc, populateReferenceQuery } from "~/utils/builder";
+import { type ConnectionOptions, doRequest } from "~/utils/request";
+import type { MetafieldDefinitionSchema, MetafieldDefinitionSchemaEntry } from "~/types/metafield-definitions";
+import type { MetaobjectDefinitionSchema } from "~/types/metaobject-definitions";
 import { serializeValue } from "~/transformer/serializer";
 import { deserializeMetafield } from "~/transformer/deserializer";
 
@@ -204,11 +205,7 @@ export class MetafieldRepository {
    */
   async setAppMetafields(input: Omit<LooseMetafieldsSetInput, 'ownerId'>[]): Promise<void> {
     const appInstallationId = await this.getAppInstallationId();
-    
-    const metafieldsSet: LooseMetafieldsSetInput[] = input.map(metafield => ({
-      ...metafield,
-      ownerId: appInstallationId
-    }));
+    const metafieldsSet: LooseMetafieldsSetInput[] = input.map(metafield => ({ ...metafield, ownerId: appInstallationId }));
 
     await this.setMetafields(metafieldsSet);
   }
@@ -218,10 +215,7 @@ export class MetafieldRepository {
    */
   async setMetafields(input: LooseMetafieldsSetInput[]): Promise<void> {
     // Our loose metafields don't have the value serialized as JSON, so we do that. We also snake_case the keys
-    const metafieldsSet: MetafieldsSetInput[] = input.map(metafield => ({
-      ...metafield,
-      value: serializeValue(metafield.value)
-    }));
+    const metafieldsSet: MetafieldsSetInput[] = input.map(metafield => ({ ...metafield, value: serializeValue(metafield.value) }));
 
     const builder = QueryBuilder.mutation('SetMetafields')
       .variables({ metafields: '[MetafieldsSetInput!]!' })
@@ -283,27 +277,24 @@ export class MetafieldRepository {
   }
 
   /**
+   * Find a metafield definition
+   */
+  private findDefinition(opts: { ownerType: AllowRawEnum<MetafieldOwnerType>, key: string, namespace?: string }): MetafieldDefinitionSchemaEntry | undefined {
+    return this.metafieldDefinitions.find(def => def.key === opts.key && def.namespace === opts.namespace && def.ownerType === opts.ownerType);
+  }
+
+  /**
    * For reference metafields, set up the query to fetch the reference or references objects
    */
   private setupReferenceQuery(opts: { fieldBuilder: FieldBuilder, ownerType: AllowRawEnum<MetafieldOwnerType>, key: string, namespace?: string, populate?: boolean | string[], onPopulate?: OnPopulateFunc }): void {
-    const metafieldDefinition = this.metafieldDefinitions.find(def => def.key === opts.key && def.namespace === opts.namespace && def.ownerType === opts.ownerType);
+    const definition = this.findDefinition(opts);
 
-    if (!metafieldDefinition) {
-      opts.onPopulate?.({ fieldBuilder: opts.fieldBuilder });
-    } else {
-      // If we have a definition for this metafield, we know exactly the reference type so we can do an optimized query
-      if (!metafieldDefinition.type.includes('_reference')) {
-        return; // Not a reference metafield
-      }
-
-      // If populate is a boolean, we just convert it to an array
-      let populate: string[] = [];
-
-      if (Array.isArray(opts.populate)) {
-        populate = opts.populate;
-      }
-
-      populateReferenceQuery({ metaobjectDefinitions: this.metaobjectDefinitions, fieldBuilder: opts.fieldBuilder, fieldDefinition: metafieldDefinition, populate, onPopulate: opts.onPopulate });
+    if (!definition?.type.includes('_reference')) {
+      return;
     }
+
+    const populate = Array.isArray(opts.populate) ? opts.populate : [];
+
+    populateReferenceQuery({ metaobjectDefinitions: this.metaobjectDefinitions, fieldBuilder: opts.fieldBuilder, fieldDefinition: definition, populate, onPopulate: opts.onPopulate });
   }
 }

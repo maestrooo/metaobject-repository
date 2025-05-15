@@ -1,4 +1,4 @@
-import { UserError } from "~/types/admin.types";
+import type { UserError } from "~/types/admin.types";
 
 export class UserErrorsException extends Error {
   errors: UserError[] = [];

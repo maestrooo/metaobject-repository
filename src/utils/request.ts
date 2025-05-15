@@ -1,6 +1,6 @@
 import { ApiVersion } from "@shopify/shopify-app-remix/server";
-import { AdminOperations } from "@shopify/admin-api-client";
-import { AdminGraphqlClient } from "@shopify/shopify-app-remix/server";
+import type { AdminOperations } from "@shopify/admin-api-client";
+import type { AdminGraphqlClient } from "@shopify/shopify-app-remix/server";
 import { OperationBuilder } from "raku-ql";
 import { apiVersion as defaultApiVersion } from "~/version";
 

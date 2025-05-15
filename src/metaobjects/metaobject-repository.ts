@@ -1,13 +1,13 @@
 import { ApiVersion } from "@shopify/shopify-app-remix/server";
 import { QueryBuilder } from "raku-ql";
-import { Job, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload } from "~/types/admin.types";
-import { MetaobjectDefinitionSchema, FromDefinitionWithSystemData, ValidPopulatePaths } from "~/types/metaobject-definitions";
-import { CreateInput, FindOptions, PaginatedMetaobjects, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "~/types/metaobject-repository";
+import type { Job, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload } from "~/types/admin.types";
+import type { MetaobjectDefinitionSchema, FromDefinitionWithSystemData, ValidPopulatePaths } from "~/types/metaobject-definitions";
+import type { CreateInput, FindOptions, PaginatedMetaobjects, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "~/types/metaobject-repository";
 import { UserErrorsException } from "~/exception/user-errors-exception";
 import { deserialize, serializeFields } from "~/transformer";
 import { NotFoundException } from "~/exception";
 import { populateMetaobjectQuery } from "~/utils/builder";
-import { ConnectionOptions, doRequest } from "~/utils/request";
+import { type ConnectionOptions, doRequest } from "~/utils/request";
 
 type ConstructorOptions<T> = {
   type: T;

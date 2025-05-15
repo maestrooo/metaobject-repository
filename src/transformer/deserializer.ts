@@ -1,5 +1,5 @@
 import { toCamel, camel } from "snake-camel";
-import { Metafield, Metaobject } from "~/types/admin.types";
+import type { Metafield, Metaobject } from "~/types/admin.types";
 
 function deserializeReference(valueForKey: any): any {
   if (valueForKey?.['__typename'] === 'Metaobject') {

@@ -1,6 +1,6 @@
-import { OnPopulateWithoutDefinitionFunc } from "~/utils/builder";
-import { Metafield, MetafieldsSetInput, PageInfo } from "./admin.types";
-import { PaginationArgs } from "./utils";
+import type { OnPopulateWithoutDefinitionFunc } from "~/utils/builder";
+import type { Metafield, MetafieldsSetInput, PageInfo } from "./admin.types";
+import type { PaginationArgs } from "./utils";
 
 export type PickedMetafield = Pick<Metafield, 'id' | 'compareDigest' | 'type' | 'namespace' | 'key' | 'jsonValue'>;
 export type PickedMetafieldWithReference<T> = PickedMetafield & { reference?: T; references?: T[] };

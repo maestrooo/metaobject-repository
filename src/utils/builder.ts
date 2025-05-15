@@ -1,8 +1,8 @@
 import { FieldBuilder } from "raku-ql";
 import { camel } from "snake-camel";
-import { Collection, Company, Customer, File, GenericFile, Metaobject, Page, Product, ProductVariant, TaxonomyValue, Video, MediaImage } from "~/types/admin.types";
-import { MetafieldBaseDefinition } from "~/types/metafield-definitions";
-import { MetaobjectDefinitionSchema, MetaobjectDefinitionSchemaEntry } from "~/types/metaobject-definitions";
+import type { Collection, Company, Customer, File, GenericFile, Metaobject, Page, Product, ProductVariant, TaxonomyValue, Video, MediaImage } from "~/types/admin.types";
+import type { MetafieldBaseDefinition } from "~/types/metafield-definitions";
+import type { MetaobjectDefinitionSchema, MetaobjectDefinitionSchemaEntry } from "~/types/metaobject-definitions";
 
 export type OnPopulateFunc = ({ fieldDefinition, fieldBuilder }: { fieldDefinition?: MetafieldBaseDefinition, fieldBuilder: FieldBuilder}) => void;
 export type OnPopulateWithoutDefinitionFunc = ({ fieldBuilder }: { fieldBuilder: FieldBuilder}) => void;

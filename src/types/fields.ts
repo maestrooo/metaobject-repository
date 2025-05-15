@@ -4,7 +4,7 @@
  * --------------------------------------------------------------------------------------------
  */
 
-import { Collection, Company, Customer, File, GenericFile, MediaImage, Metaobject, Page, Product, ProductVariant, TaxonomyValue, Video } from "./admin.types";
+import type { Collection, Company, Customer, File, GenericFile, MediaImage, Metaobject, Page, Product, ProductVariant, TaxonomyValue, Video } from "./admin.types";
 
 type Weight = {
   unit: 'oz' | 'lb' | 'g' | 'kg';

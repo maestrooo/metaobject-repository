@@ -1,9 +1,9 @@
-import { MetaobjectAccessInput, MetaobjectDefinition, MetaobjectDefinitionCreateInput, MetaobjectDefinitionCreatePayload, MetaobjectDefinitionDeletePayload, MetaobjectDefinitionUpdateInput, MetaobjectDefinitionUpdatePayload } from "~/types/admin.types";
+import type { MetaobjectAccessInput, MetaobjectDefinition, MetaobjectDefinitionCreateInput, MetaobjectDefinitionCreatePayload, MetaobjectDefinitionDeletePayload, MetaobjectDefinitionUpdateInput, MetaobjectDefinitionUpdatePayload } from "~/types/admin.types";
 import { QueryBuilder } from "raku-ql";
 import { DefinitionTakenException } from "~/exception/definition-taken-exception";
 import { convertValidations } from "~/utils/metafield-validations";
-import { ConnectionOptions, doRequest } from "~/utils/request";
-import { MetaobjectDefinitionSchema } from "~/types/metaobject-definitions";
+import { type ConnectionOptions, doRequest } from "~/utils/request";
+import type { MetaobjectDefinitionSchema } from "~/types/metaobject-definitions";
 
 type ConstructorOptions = {
   connection: ConnectionOptions;

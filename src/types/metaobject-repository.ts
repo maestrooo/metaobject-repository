@@ -4,13 +4,13 @@
  * schema to auto-complete capabilities.
  */
 
-import { JSONSchema, FromSchema } from "json-schema-to-ts";
-import { MetaobjectCapabilityDataInput, PageInfo } from "./admin.types";
-import { MetaobjectDefinitionByType, DefinitionCapabilities, MetaobjectDefinitionSchema, MetaobjectFieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./metaobject-definitions";
-import { DefaultMap } from "./fields";
+import type { JSONSchema, FromSchema } from "json-schema-to-ts";
+import type { MetaobjectCapabilityDataInput, PageInfo } from "./admin.types";
+import type { MetaobjectDefinitionByType, DefinitionCapabilities, MetaobjectDefinitionSchema, FromDefinitionWithSystemData, ValidPopulatePaths } from "./metaobject-definitions";
+import type { DefaultMap } from "./fields";
 import { MetaobjectRepository } from "~/metaobjects/metaobject-repository";
-import { CamelCase, CamelCaseKeys, PaginationArgs } from "./utils";
-import { OnPopulateFunc } from "~/utils/builder";
+import type { CamelCase, CamelCaseKeys, PaginationArgs } from "./utils";
+import type { OnPopulateFunc } from "~/utils/builder";
 
 /**
  * --------------------------------------------------------------------------------------------

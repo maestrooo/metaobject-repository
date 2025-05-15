@@ -6,20 +6,21 @@ This section explains how to interact with metaobjects using the repository API.
 
 ## Setup
 
-Before performing any operations, make sure to set a GraphQL client, coming from a loader or action:
+Before performing any operations, make sure to set a GraphQL client by using the `createContext` method:
 
 ```ts
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
- 
+  const { eventRepository } = createContext({ connection: { client: admin.graphql }, metaobjectDefinitions})
+
   eventRepository.withClient(admin.graphql);
 }
 ```
 
-Repositories are not created automatically. You must create a repository for each of your metaobject types. [More information](docs/2-definitions.md#defining-a-schema).
+Repositories are not created automatically. You must create a repository for each of your metaobject types. [More information](docs/3-metaobject-definitions.md#defining-a-schema).
 
 > Shopify apps are currently using Remix 2.0, which does not support middlewares. Each loaders are run in parallel,
-so you must ensure that you set the client on each loader. When Shopify will add support for middleware, this process will be simplified.
+so you must ensure that you set the client on each loader. When Shopify will add support for middleware, this process will be simplified and we won't need to create a context all the time.
 
 ---
 
@@ -31,6 +32,11 @@ so you must ensure that you set the client on each loader. When Shopify will add
 const event = await eventRepository.findById("gid://shopify/Metaobject/123");
 ```
 
+Supported options:
+- `includeCapabilities` (false by default)
+- `includeThumbnail` (false by default)
+- `populate`, `onPopulate`
+
 - Also accepts legacy numeric IDs (auto-converted).
 - Use `findByIdOrFail` to throw if not found.
 
@@ -39,6 +45,11 @@ const event = await eventRepository.findById("gid://shopify/Metaobject/123");
 ```ts
 const event = await eventRepository.findByHandle("my-handle");
 ```
+
+Supported options:
+- `includeCapabilities` (false by default)
+- `includeThumbnail` (false by default)
+- `populate`, `onPopulate`
 
 - Use `findByHandleOrFail` to throw if not found.
 
@@ -64,6 +75,8 @@ const result = await eventRepository.find({
 Supported options:
 - `first`, `last`, `before`, `after`, `reverse`, `sortKey`
 - `query` (Shopify search syntax)
+- `includeCapabilities` (false by default)
+- `includeThumbnail` (false by default)
 - `populate`, `onPopulate`
 
 To make it easier to use in Remix apps, use the `extractFindParams` utility:
@@ -83,7 +96,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 }
 ```
 
-> It expects query params to be called `first`, `last`, `before`, `after`, `query`, `reverse` and `sortKey`. Supports for custom param names is not currently supported.
+> It expects query params to be called `first`, `last`, `before`, `after`, `query`, `reverse` and `sortKey`. If you params are named differently, then you must extract the parameters manually.
 
 ---
 
@@ -104,6 +117,8 @@ const event = await eventRepository.create({
 
 Supported options:
 - `populate`, `onPopulate`
+- `includeCapabilities` (false by default)
+- `includeThumbnail` (false by default)
 
 - Fully typed from schema.
 - Required fields are enforced by the TypeScript type, meaning that TypeScript will raise an error if you don't pass required fields.
@@ -123,6 +138,8 @@ await eventRepository.update({
 
 Supported options:
 - `populate`, `onPopulate`
+- `includeCapabilities` (false by default)
+- `includeThumbnail` (false by default)
 
 - Fields are optional even if marked required in the schema.
 
@@ -139,6 +156,8 @@ await eventRepository.upsert({
 
 Supported options:
 - `populate`, `onPopulate`
+- `includeCapabilities` (false by default)
+- `includeThumbnail` (false by default)
 
 - Requires `handle` to be set.
 - This method is useful when syncing or importing data, as it avoids duplicating objects.
@@ -162,6 +181,8 @@ await eventRepository.createMany([
 
 Supported options:
 - `populate`, `onPopulate`
+- `includeCapabilities` (false by default)
+- `includeThumbnail` (false by default)
 
 > Only supported on the `unstable` Shopify GraphQL API. You can only pass up to 25 objects.
 
@@ -286,11 +307,11 @@ event.system.type;
 event.system.displayName;
 // event.system.createdAt; => not yet available, currently only available on unstable
 event.system.updatedAt;
-event.system.capabilities;
-event.system.thumbnail;
+event.system.capabilities; // Only if { includeCapabilities is set to true when calling the find* methods }
+event.system.thumbnail; // Only if { includeThumbnail is set to true when calling the find* methods }
 ```
 
-> These fields are fetched only when necessary to optimize performance. For instance, a metaobject definition that do not have any color or file field can't have a thumbnail, so the thumbnail won't be retrieved at all and will be set to null.
+> By default, capabilities and thumbnail field are not returned, as they can increase query cost significantly. Only include those fields if you need them in your page, and after ensuring the query cost stays under control.
 
 ---
 

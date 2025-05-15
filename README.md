@@ -20,7 +20,7 @@ A minimal example to define a schema, create a metaobject, and delete it.
 
 ```ts
 // definitions.ts
-import { MetaobjectDefinitionSchema, MetaobjectRepository } from "metaobject-repository";
+import { MetaobjectDefinitionSchema } from "metaobject-repository";
 
 export const definitions = [
   {
@@ -42,13 +42,13 @@ export const definitions = [
 
 ```ts
 // loader.ts
-import { eventRepository, definitions } from "./definitions";
+import { metaobjectDefinitions } from "./definitions";
 import { createContext } from "metaobject-repository";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   
-  const { eventRepository, metaobjectDefinitionManager } = createContext({ admin.graphql });
+  const { eventRepository, metaobjectDefinitionManager } = createContext({ connection: { client: admin.graphql }, metaobjectDefinitions });
 
   // Create the schema on Shopify (dependencies between schemas are automatically resolved)
   await metaobjectDefinitionManager.createFromSchema();
@@ -70,7 +70,7 @@ A minimal example to define a schema, create a metafield, and delete it.
 
 ```ts
 // definitions.ts
-import { MetafieldDefinitionSchema, MetafieldRepository } from "metaobject-repository";
+import { MetafieldDefinitionSchema } from "metaobject-repository";
 
 export const definitions = [
   {
@@ -84,13 +84,13 @@ export const definitions = [
 
 ```ts
 // loader.ts
-import { eventRepository, definitions } from "./definitions";
+import { metafieldDefinitions } from "./definitions";
 import { createContext } from "metaobject-repository";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   
-  const { metafieldRepository, metafieldDefinitionManager } = createContext({ admin.graphql });
+  const { metafieldRepository, metafieldDefinitionManager } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
 
   // Create the schema on Shopify (dependencies between schemas are automatically resolved)
   await metafieldDefinitionManager.createFromSchema();
@@ -109,12 +109,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 ## 📚 Documentation
 
 - [Typing system](./docs/1-typing.md)
-- [Managing metaobject definitions](./docs/2-metaobject-definitions.md)
-- [Managing metaobjects](./docs/3-metaobjects.md)
-- [Managing metafield definitions](./docs/4-metafield-definitions.md)
-- [Managing metafields](./docs/4-metafields.md)
-- [Storefront tokens](./docs/5-storefront-tokens.md)
-- [Recipes](./docs/6-recipes.md)
+- [Authentication](./docs/2-authentication.md)
+- [Managing metaobject definitions](./docs/3-metaobject-definitions.md)
+- [Managing metaobjects](./docs/4-metaobjects.md)
+- [Managing metafield definitions](./docs/5-metafield-definitions.md)
+- [Managing metafields](./docs/6-metafields.md)
+- [Storefront tokens](./docs/7-storefront-tokens.md)
+- [Recipes](./docs/8-recipes.md)
 
 ---
 

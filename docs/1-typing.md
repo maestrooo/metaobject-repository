@@ -19,21 +19,9 @@ fields: [
 When accessing data in your code:
 
 ```ts
-const host = await hostRepository.findById("gid://shopify/Metaobject/123");
+const host = await hostRepository.findByIdOrFail("gid://shopify/Metaobject/123");
 host.firstName; // camelCase auto-completed and type-safe
 ```
-
----
-
-## Typed repositories
-
-The primary entrypoint is the `MetaobjectRepository`, which infers types from the schema you define:
-
-```ts
-export const eventRepository = new MetaobjectRepository(definitions, "$app:event");
-```
-
-From this, the returned objects are strictly typed with the correct field structure, capabilities, and even system-level properties like `id`, `handle`, `createdAt`, etc. More information can be found in [metaobjects documentation](/3-metaobjects.md).
 
 ---
 

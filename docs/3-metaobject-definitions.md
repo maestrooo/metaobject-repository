@@ -12,7 +12,7 @@ Create a `definitions.ts` file somewhere in your code, and export your definitio
 at the end to get type validation.
 
 ```ts
-import { MetaobjectDefinitionSchema, MetaobjectRepository } from "metaobject-repository";
+import { MetaobjectDefinitionSchema } from "metaobject-repository";
 
 export const definitions = [
   {
@@ -105,9 +105,6 @@ export const definitions = [
     ]
   },
 ] as const satisfies MetaobjectDefinitionSchema;
-
-export const eventRepository = new MetaobjectRepository(definitions, "$app:event");
-export const hostRepository = new MetaobjectRepository(definitions, "$app:repository");
 ```
 
 The schema follows closely the Shopify one, with a few notable exceptions:
@@ -121,16 +118,16 @@ is created, dependencies are automatically resolved, and definitions are creatin
 
 ### Creating a schema
 
-Use the `metaobjectDefinitionManager` to automatically create metaobject definitions from a static schema:
+Use the `createContext` to retrieve authentified objects, and get the `metaobjectDefinitionManager`:
 
 ```ts
-import { metaobjectDefinitionManager } from "metaobject-repository";
-import { definitions } from "./your-definitions";
+import { createContext } from "metaobject-repository";
+import { metaobjectDefinitions } from "./your-definitions";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
+  const { metaobjectDefinitionManager } = createContext({ connection: { client: admin.graphql }, metaobjectDefinitions });
 
-  metaobjectDefinitionManager.withClient(admin.graphql);
   await metaobjectDefinitionManager.createFromSchema(definitions);
 
   return null;
@@ -159,11 +156,12 @@ to customize a definition on a per-merchant basis.
 ### Updating a definition
 
 ```ts
-import { metaobjectDefinitionManager } from "metaobject-repository";
+import { createContext } from "metaobject-repository";
+import { metaobjectDefinitions } from "./your-definitions";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  metaobjectDefinitionManager.withClient(admin.graphql);
+  const { metaobjectDefinitionManager } = createContext({ connection: { client: admin.graphql }, metaobjectDefinitions });
 
   await metaobjectDefinitionManager.updateDefinition({
     type: "$app:event",
@@ -189,11 +187,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 ### Deleting a definition
 
 ```ts
-import { metaobjectDefinitionManager } from "metaobject-repository";
+import { createContext } from "metaobject-repository";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  metaobjectDefinitionManager.withClient(admin.graphql);
+  const { metaobjectDefinitionManager } = createContext({ connection: { client: admin.graphql }, metaobjectDefinitions });
 
   const deletedId = await metaobjectDefinitionManager.deleteDefinition("$app:event");
 
@@ -209,7 +207,10 @@ Most of the time, you will use the `createFromSchema` from the definition manage
 and handle the dependencies between metaobjects automatically.
 
 ```ts
-import { metaobjectDefinitionManager } from "metaobject-repository";
+import { createContext } from "metaobject-repository";
+import { metaobjectDefinitions } from "./your-definitions";
+
+const { metaobjectDefinitionManager } = createContext({ connection: { client: admin.graphql }, metaobjectDefinitions });
 
 const createdId = await metaobjectDefinitionManager.createDefinition({
   definition: {
@@ -230,9 +231,10 @@ const createdId = await metaobjectDefinitionManager.createDefinition({
 ### Retrieving definitions
 
 ```ts
-import { metaobjectDefinitionManager } from "metaobject-repository";
+import { createContext } from "metaobject-repository";
+import { metaobjectDefinitions } from "./your-definitions";
 
-metaobjectDefinitionManager.withClient(admin.graphql);
+const { metaobjectDefinitionManager } = createContext({ connection: { client: admin.graphql }, metaobjectDefinitions });
 
 const definition = await metaobjectDefinitionManager.findDefinitionByType("$app:event");
 // or

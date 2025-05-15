@@ -13,8 +13,7 @@ import { storefrontTokenRepository } from "metaobject-repository";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
- 
-  storefrontTokenRepository.withClient(admin.graphql);
+  const { storefrontTokenRepository } = createContext({ connection: { client: admin.graphql }});
 }
 ```
 

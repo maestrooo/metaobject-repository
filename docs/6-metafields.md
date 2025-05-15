@@ -1,3 +1,5 @@
+### This section has not been updated yet to reflect latest changes
+
 # Managing Metafields
 
 While the primary purpose of `metaobject-repository` is to simplify access to Shopify metaobjects, it also provides a thin, type-safe wrapper around metafield operations.

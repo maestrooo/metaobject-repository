@@ -1,3 +1,5 @@
+### This section has not been updated yet to reflect latest changes
+
 # Managing Definitions
 
 This section explains how to create, retrieve, and update Shopify metafield definitions. The process is similar to metaobject definitions, with a few important differences.

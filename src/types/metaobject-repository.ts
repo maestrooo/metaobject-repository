@@ -5,12 +5,12 @@
  */
 
 import { JSONSchema, FromSchema } from "json-schema-to-ts";
-import { FieldBuilder } from "raku-ql";
 import { MetaobjectCapabilityDataInput, PageInfo } from "./admin.types";
 import { MetaobjectDefinitionByType, DefinitionCapabilities, MetaobjectDefinitionSchema, MetaobjectFieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "./metaobject-definitions";
 import { DefaultMap } from "./fields";
 import { MetaobjectRepository } from "~/metaobjects/metaobject-repository";
 import { CamelCase, CamelCaseKeys, PaginationArgs } from "./utils";
+import { OnPopulateFunc } from "~/utils/builder";
 
 /**
  * --------------------------------------------------------------------------------------------
@@ -95,8 +95,6 @@ export type UpsertInput<D extends MetaobjectDefinitionSchema, T extends D[number
  * Types for pagination, find options
  * --------------------------------------------------------------------------------------------
  */
-
-export type OnPopulateFunc = (fieldDefinition: MetaobjectFieldDefinition, fieldBuilder: FieldBuilder) => void;
 
 export type PopulateOptions<P> = {
   populate?: readonly P[];

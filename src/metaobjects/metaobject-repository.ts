@@ -1,21 +1,31 @@
 import { ApiVersion } from "@shopify/shopify-app-remix/server";
-import { FieldBuilder, QueryBuilder } from "raku-ql";
-import { camel } from "snake-camel";
+import { QueryBuilder } from "raku-ql";
 import { Job, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload } from "~/types/admin.types";
-import { MetaobjectDefinitionSchema, MetaobjectDefinitionSchemaEntry, MetaobjectFieldDefinition, FromDefinitionWithSystemData, ValidPopulatePaths } from "~/types/metaobject-definitions";
-import { CreateInput, FindOptions, OnPopulateFunc, PaginatedMetaobjects, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "~/types/metaobject-repository";
+import { MetaobjectDefinitionSchema, FromDefinitionWithSystemData, ValidPopulatePaths } from "~/types/metaobject-definitions";
+import { CreateInput, FindOptions, PaginatedMetaobjects, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "~/types/metaobject-repository";
 import { UserErrorsException } from "~/exception/user-errors-exception";
 import { deserialize, serializeFields } from "~/transformer";
 import { NotFoundException } from "~/exception";
-import { populateShopifyResourceReference } from "~/utils/builder";
-import { doRequest } from "~/utils/request";
-import { SchemaProvider } from "~/provider/schema-provider";
+import { populateMetaobjectQuery } from "~/utils/builder";
+import { ConnectionOptions, doRequest } from "~/utils/request";
 
+type ConstructorOptions<T> = {
+  type: T;
+  connection: ConnectionOptions;
+  metaobjectDefinitions: MetaobjectDefinitionSchema;
+}
 /**
  * Object repository
  */
-export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extends D[number]["type"] = D[number]["type"]> {
-  constructor(private readonly type: T) {
+export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extends D[number]["type"]> {
+  private readonly type: T;
+  private readonly connection: ConnectionOptions;
+  private readonly metaobjectDefinitions: MetaobjectDefinitionSchema;
+  
+  constructor({ type, connection, metaobjectDefinitions }: ConstructorOptions<T>) {
+    this.type = type;
+    this.connection = connection;
+    this.metaobjectDefinitions = metaobjectDefinitions;
   }
 
   /**
@@ -31,19 +41,14 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
     id: string,
     opts?: PopulateOptions<P>
   ): Promise<FromDefinitionWithSystemData<D, T, P> | null> {
-    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
-
     const builder = QueryBuilder.query('GetMetaobject')
       .variables({ id: 'ID!' })
-      .fragment<Metaobject>('BaseMetaobjectFields', 'Metaobject', (fragment) => {
-        this.setupMetaobjectFragment(definition, fragment);
-      })
-      .operation<Metaobject>('metaobject', { 'id': '$id' }, (metaobject) => {
-        this.setupMetaobjectQuery(definition, metaobject, opts?.populate || [], opts?.onPopulate);
+      .operation<Metaobject>('metaobject', { 'id': '$id' }, (metaobjectBuilder) => {
+        populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: metaobjectBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
       });
     
     const variables = { id: this.transformId(id) };
-    const { metaobject } = (await (await doRequest({ builder, variables })).json()).data;
+    const { metaobject } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data;
 
     return metaobject ? deserialize(metaobject) : null;
   }
@@ -71,19 +76,14 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
     handle: string,
     opts?: PopulateOptions<P>
   ): Promise<FromDefinitionWithSystemData<D, T, P> | null> {
-    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
-
     const builder = QueryBuilder.query('GetMetaobjectByHandle')
       .variables({ handle: 'MetaobjectHandleInput!' })
-      .fragment<Metaobject>('BaseMetaobjectFields', 'Metaobject', (fragment) => {
-        this.setupMetaobjectFragment(definition, fragment);
-      })
-      .operation<Metaobject>('metaobjectByHandle', { 'handle': '$handle' }, (metaobject) => {
-        this.setupMetaobjectQuery(definition, metaobject, opts?.populate || [], opts?.onPopulate);
+      .operation<Metaobject>('metaobjectByHandle', { 'handle': '$handle' }, (metaobjectBuilder) => {
+        populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: metaobjectBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
       });
 
     const variables = { handle: { handle, type: this.type } };
-    const { metaobjectByHandle } = (await (await doRequest({ builder, variables })).json()).data;
+    const { metaobjectByHandle } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data;
 
     return metaobjectByHandle ? deserialize(metaobjectByHandle) : null;
   }
@@ -116,19 +116,14 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       sortKey: opts?.sortKey
     }
 
-    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
-
     const builder = QueryBuilder.query('GetMetaobjects')
-      .fragment<Metaobject>('BaseMetaobjectFields', 'Metaobject', (fragment) => {
-        this.setupMetaobjectFragment(definition, fragment);
-      })
       .connection('metaobjects', connectionParameters, (connection) => {
-        connection.object('nodes', (nodes) => {
-          this.setupMetaobjectQuery(definition, nodes, opts?.populate || [], opts?.onPopulate);
+        connection.object('nodes', (nodesBuilder) => {
+          populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: nodesBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
         });
       });
 
-    const { nodes } = (await (await doRequest({ builder })).json()).data.metaobjects;
+    const { nodes } = (await (await doRequest({ connection: this.connection, builder })).json()).data.metaobjects;
 
     return nodes.map((metaobject: Metaobject) => deserialize(metaobject));
   }
@@ -152,19 +147,14 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       connectionParameters.first = 50; // Provide a default value for first
     }
 
-    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
-
     const builder = QueryBuilder.query('GetMetaobjects')
-      .fragment<Metaobject>('BaseMetaobjectFields', 'Metaobject', (fragment) => {
-        this.setupMetaobjectFragment(definition, fragment);
-      })
       .connection('metaobjects', connectionParameters, (connection) => {
-        connection.object('nodes', (nodes) => {
-          this.setupMetaobjectQuery(definition, nodes, opts?.populate || [], opts?.onPopulate);
+        connection.object('nodes', (nodesBuilder) => {
+          populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: nodesBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
         });
       });
 
-    const { nodes, pageInfo } = (await (await doRequest({ builder })).json()).data.metaobjects;
+    const { nodes, pageInfo } = (await (await doRequest({ connection: this.connection, builder })).json()).data.metaobjects;
 
     return {
       pageInfo,
@@ -185,17 +175,12 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
     input: CreateInput<D, T>, 
     opts?: PopulateOptions<P>
   ): Promise<FromDefinitionWithSystemData<D, T, P>> {
-    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
-
     const builder = QueryBuilder.mutation('CreateMetaobject')
       .variables({ metaobject: 'MetaobjectCreateInput!' })
-      .fragment<Metaobject>('BaseMetaobjectFields', 'Metaobject', (fragment) => {
-        this.setupMetaobjectFragment(definition, fragment);
-      })
       .operation<MetaobjectCreatePayload>('metaobjectCreate', { metaobject: '$metaobject' }, (metaobjectCreate) => {
         metaobjectCreate
-          .object('metaobject', (metaobject) => {
-            this.setupMetaobjectQuery(definition, metaobject, opts?.populate || [], opts?.onPopulate);
+          .object('metaobject', (metaobjectBuilder) => {
+            populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: metaobjectBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
           })
           .object('userErrors', (userErrors) => {
             userErrors.fields('code', 'field', 'message');
@@ -210,7 +195,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     };
 
-    const { metaobject, userErrors } = (await (await doRequest({ builder, variables })).json()).data.metaobjectCreate;
+    const { metaobject, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metaobjectCreate;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -230,17 +215,12 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       throw new Error('You can only create a maximum of 25 metaobjects at once');
     }
 
-    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
-
     const builder = QueryBuilder.mutation('CreateMetaobjects')
       .variables({ input: 'MetaobjectsCreateInput!' })
-      .fragment<Metaobject>('BaseMetaobjectFields', 'Metaobject', (fragment) => {
-        this.setupMetaobjectFragment(definition, fragment);
-      })
       .operation<MetaobjectsCreatePayload>('metaobjectsCreate', { input: '$input' }, (metaobjectsCreate) => {
         metaobjectsCreate
-          .object('metaobjects', (metaobjects) => {
-            this.setupMetaobjectQuery(definition, metaobjects, opts?.populate || [], opts?.onPopulate);
+          .object('metaobjects', (metaobjectsBuilder) => {
+            populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: metaobjectsBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
           })
           .object('userErrors', (userErrors) => {
             userErrors.fields('code', 'field', 'message');
@@ -259,7 +239,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     };
 
-    const { metaobjects, userErrors } = (await (await doRequest({ builder, variables, apiVersion: ApiVersion.Unstable })).json()).data.metaobjectsCreate;
+    const { metaobjects, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables, apiVersion: ApiVersion.Unstable })).json()).data.metaobjectsCreate;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -275,17 +255,12 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
     input: UpdateInput<D, T>, 
     opts?: PopulateOptions<P>
   ): Promise<FromDefinitionWithSystemData<D, T, P>> {
-    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
-
     const builder = QueryBuilder.mutation('UpdateMetaobject')
       .variables({ id: 'ID!', metaobject: 'MetaobjectUpdateInput!' })
-      .fragment<Metaobject>('BaseMetaobjectFields', 'Metaobject', (fragment) => {
-        this.setupMetaobjectFragment(definition, fragment);
-      })
       .operation<MetaobjectUpdatePayload>('metaobjectUpdate', { id: '$id', metaobject: '$metaobject' }, (metaobjectUpdate) => {
         metaobjectUpdate
-          .object('metaobject', (metaobject) => {
-            this.setupMetaobjectQuery(definition, metaobject, opts?.populate || [], opts?.onPopulate);
+          .object('metaobject', (metaobjectBuilder) => {
+            populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: metaobjectBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
           })
           .object('userErrors', (userErrors) => {
             userErrors.fields('code', 'field', 'message');
@@ -302,7 +277,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     };
 
-    const { metaobject, userErrors } = (await (await doRequest({ builder, variables })).json()).data.metaobjectUpdate;
+    const { metaobject, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metaobjectUpdate;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -318,17 +293,12 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
     input: UpsertInput<D, T>, 
     opts?: PopulateOptions<P>
   ): Promise<FromDefinitionWithSystemData<D, T, P>> {
-    const definition = SchemaProvider.getMetaobjectDefinitionEntry(this.type);
-
     const builder = QueryBuilder.mutation('UpsertMetaobject')
       .variables({ handle: 'MetaobjectHandleInput!', metaobject: 'MetaobjectUpsertInput!' })
-      .fragment<Metaobject>('BaseMetaobjectFields', 'Metaobject', (fragment) => {
-        this.setupMetaobjectFragment(definition, fragment);
-      })
       .operation<MetaobjectUpsertPayload>('metaobjectUpsert', { handle: '$handle', metaobject: '$metaobject' }, (metaobjectUpsert) => {
         metaobjectUpsert
-          .object('metaobject', (metaobject) => {
-            this.setupMetaobjectQuery(definition, metaobject, opts?.populate || [], opts?.onPopulate);
+          .object('metaobject', (metaobjectBuilder) => {
+            populateMetaobjectQuery({ metaobjectDefinitions: this.metaobjectDefinitions, metaobjectType: this.type, fieldBuilder: metaobjectBuilder, populate: opts?.populate || [], onPopulate: opts?.onPopulate });
           })
           .object('userErrors', (userErrors) => {
             userErrors.fields('code', 'field', 'message');
@@ -348,7 +318,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     };
 
-    const { metaobject, userErrors } = (await (await doRequest({ builder, variables })).json()).data.metaobjectUpsert;
+    const { metaobject, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metaobjectUpsert;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -372,7 +342,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       });
 
     const variables = { id: this.transformId(id) };
-    const { deletedId, userErrors } = (await (await doRequest({ builder, variables })).json()).data.metaobjectDelete; 
+    const { deletedId, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metaobjectDelete; 
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -403,130 +373,13 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     }
     
-    const { job, userErrors } = (await (await doRequest({ builder, variables })).json()).data.metaobjectBulkDelete;
+    const { job, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metaobjectBulkDelete;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
     }
 
     return job;
-  }
-
-  /**
-   * --------------------------------------------------------------------------------------------------------
-   * QUERY BUILDER UTILITIES
-   * --------------------------------------------------------------------------------------------------------
-   */
-
-  /**
-   * Setup the base fields that are retrieved for all metaobjects (including the system information)
-   */
-  private setupMetaobjectFragment(schema: MetaobjectDefinitionSchemaEntry, fragment: FieldBuilder<Metaobject>): void {
-    fragment
-      .fields('id', 'type', 'handle', /*'createdAt',*/ 'updatedAt', 'displayName')
-      .object('fields', (fields) => {
-        fields.fields('key', 'jsonValue', 'type')
-      });
-
-    // We get the capabilities only if the definition contains some
-    if (schema.capabilities?.publishable || schema.capabilities?.onlineStore) {
-      fragment.object('capabilities', (capabilities) => {
-        if (schema.capabilities?.publishable) {
-          capabilities.object('publishable', (publishable) => {
-            publishable.fields('status');
-          })
-        }
-
-        if (schema.capabilities?.onlineStore) {
-          capabilities.object('onlineStore', (onlineStore) => {
-            onlineStore.fields('templateSuffix')
-          })
-        }
-      })
-    }
-
-    // We only include the thumbnail field if the schema contains one file reference or one color field
-    const hasThumbnailField = schema.fields.some(field => field.type.includes('file_reference') || field.type.includes('color'));
-
-    if (hasThumbnailField) {
-      fragment.object('thumbnailField', (thumbnailField) => {
-        thumbnailField.object('thumbnail', (thumbnail) => {
-          thumbnail
-            .fields('hex')
-            .object('file', (file) => {
-              file.object('preview', (preview) => {
-                preview.object('image', (image) => {
-                  image.fields('id', 'altText', 'url', 'width', 'height');
-                })
-              });
-            });
-        });
-      });
-    }
-  }
-
-  /**
-   * Configure the query for a specific metaobject type
-   */
-  private setupMetaobjectQuery<T>(schema: MetaobjectDefinitionSchemaEntry, fieldBuilder: FieldBuilder<Metaobject>, populate: readonly string[], onPopulate?: OnPopulateFunc): void {
-    fieldBuilder.useFragment('BaseMetaobjectFields');
-    
-    schema.fields.forEach((field) => {
-      const cameledKey = camel(field.key);
-
-      if (field.type.endsWith('_reference') && populate.some(key => key === cameledKey || key.startsWith(`${cameledKey}.`))) {
-        // This resolve the populate recursively. For instance if we have ['foo.bar', 'baz'] and that this property is 'foo',
-        // this will generate a new array that will be just ['bar]
-        const nestedPopulate = populate
-          .filter(key => key === cameledKey || key.startsWith(`${cameledKey}.`))
-          .map(key => key === cameledKey ? '' : key.slice(cameledKey.length + 1))
-          .filter(Boolean); // Remove empty strings
-
-        this.setupReferenceQuery(field, fieldBuilder, nestedPopulate, onPopulate);
-      }
-    });
-  }
-
-  /**
-   * Setup how a reference query is generated
-   */
-  private setupReferenceQuery(fieldDefinition: MetaobjectFieldDefinition, fieldBuilder: FieldBuilder<any>, populate: readonly string[], onPopulate?: OnPopulateFunc): void {
-    // We prefix all references by a _ character to avoid clashes and to easily identify them when deserializing
-    fieldBuilder.object({ field: `_${camel(fieldDefinition.key)}` }, { key: fieldDefinition.key }, (field) => {
-      const setupReference = (reference: FieldBuilder): FieldBuilder => {
-        if ((fieldDefinition.type === 'metaobject_reference' || fieldDefinition.type === 'list.metaobject_reference') && fieldDefinition.metaobjectType) {
-          return reference.inlineFragment<Metaobject>('Metaobject', (fragment) => {
-            this.setupMetaobjectQuery(SchemaProvider.getMetaobjectDefinitionEntry(fieldDefinition.metaobjectType!), fragment, populate, onPopulate);
-          });
-        }
-
-        if ((fieldDefinition.type === 'mixed_reference' || fieldDefinition.type === 'list.mixed_reference') && fieldDefinition.metaobjectTypes) {
-          fieldDefinition.metaobjectTypes?.forEach((metaobjectType) => {
-            reference.inlineFragment<Metaobject>('Metaobject', (fragment) => {
-              this.setupMetaobjectQuery(SchemaProvider.getMetaobjectDefinitionEntry(metaobjectType), fragment, populate, onPopulate);
-            })
-          });
-
-          return reference;
-        }
-
-        return populateShopifyResourceReference({ fieldBuilder: reference, fieldDefinition, onPopulate });
-      }
-
-      if (fieldDefinition.type.startsWith('list.')) {
-        field.connection('references', { first: 50 }, (connection) => {
-          connection.nodes(nodes => {
-            nodes.fields('__typename');
-            setupReference(nodes);
-          });
-        });
-      } else {
-        field.object('reference', (reference) => {
-          reference.fields('__typename');
-          setupReference(reference);
-        });
-      }
-    })
   }
 
   /**

@@ -19,7 +19,7 @@ export type MetafieldBaseDefinition = MetafieldDefinitionMap[keyof MetafieldDefi
  * --------------------------------------------------------------------------------------------
  */
 
-export type MetafieldDefinition = MetafieldBaseDefinition & {
+export type MetafieldDefinitionSchemaEntry = MetafieldBaseDefinition & {
   ownerType: AllowRawEnum<MetafieldOwnerType>;
   namespace?: string;
   access?: AllowRawEnum<MetafieldAccessInput>;
@@ -28,4 +28,4 @@ export type MetafieldDefinition = MetafieldBaseDefinition & {
   constraints?: MetafieldDefinitionConstraintsInput;
 };
 
-export type MetafieldDefinitionSchema = MetafieldDefinition[]
+export type MetafieldDefinitionSchema = MetafieldDefinitionSchemaEntry[];

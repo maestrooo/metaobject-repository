@@ -2,8 +2,8 @@
 
 - Added a new `metafieldDefinitionManager`. Similar to the `metaobjectDefinitionManager`, it allows to create metafield definitions automatically.
 - Added a new `deleteDefinition` on the `metaobjectDefinitionManager`.
+- Improve the `getAppMetafield`, `getMetafield`, `getMetafields` and `getMetafield` to fetch reference.
 - The `createDefinition` method on the manager will now throw a `DefinitionTakenException` if the definition already exists, allowing to more easily categorize errors.
-- [BC] The export of the metafield repository has been renamed from `metafieldRepository` to `defaultMetafieldRepository`. This change was done to allow you to create a custom repository that is definition aware.
 - [BC] Rename the `definitionManager`, `DefinitionManager` and `DefinitionRepository` to `metaobjectDefinitionManager`, `MetaobjectDefinitionManager` and `MetaobjectDefinitionRepository`, respectively.
 - [BC] Rename the `DefinitionSchema` type to `MetaobjectDefinitionSchema`.
 - [BC] I'm reverting the changes done in 0.13.0 and merge back again all methods from the metaobject definition repository back to the metaobject definition manager. Splitting into two made the usage more confusing than needed.

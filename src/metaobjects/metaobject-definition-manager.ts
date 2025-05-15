@@ -2,19 +2,25 @@ import { MetaobjectAccessInput, MetaobjectDefinition, MetaobjectDefinitionCreate
 import { QueryBuilder } from "raku-ql";
 import { DefinitionTakenException } from "~/exception/definition-taken-exception";
 import { convertValidations } from "~/utils/metafield-validations";
-import { doRequest } from "~/utils/request";
-import { SchemaProvider } from "~/provider/schema-provider";
+import { ConnectionOptions, doRequest } from "~/utils/request";
+import { MetaobjectDefinitionSchema } from "~/types/metaobject-definitions";
 
-type SyncFromSchemaOptions = {
-  deleteDanglingDefinitions: boolean;
-  deleteDanglingFields: boolean;
+type ConstructorOptions = {
+  connection: ConnectionOptions;
+  metaobjectDefinitions: MetaobjectDefinitionSchema;
 }
 
 /**
  * Manage the schema definitions
  */
 export class MetaobjectDefinitionManager {
-  private definitionIdCache = new Map<string, string>();
+  private readonly connection: ConnectionOptions;
+  private readonly metaobjectDefinitions: MetaobjectDefinitionSchema;
+  
+  constructor({ connection, metaobjectDefinitions }: ConstructorOptions) {
+    this.connection = connection;
+    this.metaobjectDefinitions = metaobjectDefinitions;
+  }
 
   /**
    * --------------------------------------------------------------------------------------------------------
@@ -28,15 +34,9 @@ export class MetaobjectDefinitionManager {
    * resolved directly at creation time.
    */
   async createFromSchema(): Promise<void> {
-    const definitions = SchemaProvider.metaobjectDefinitions;
-
-    if (!definitions) {
-      throw new Error('Metaobject definitions schema is not set. Call SchemaProvider.setMetaobjectDefinitions() first.');
-    }
-
     // 1) Build GraphQL inputs from in-memory schema
     const createInputs: Record<string, MetaobjectDefinitionCreateInput> = {};
-    definitions.forEach((def) => {
+    this.metaobjectDefinitions.forEach((def) => {
       createInputs[def.type] = {
         type: def.type,
         name: def.name,
@@ -59,19 +59,17 @@ export class MetaobjectDefinitionManager {
     const existingIds: Record<string, string> = {};
 
     await Promise.all(
-      Object.values(createInputs).map(async (inp) => {
-        const id = await this.getCachedDefinitionId(inp.type);
+      this.metaobjectDefinitions.map(async (def) => {
+        const id = await this.findDefinitionIdByType(def.type);
 
         if (id) {
-          existingIds[inp.type] = id;
+          existingIds[def.type] = id;
         }
       })
     );
 
     // 3) Determine which types still need creation
-    const toCreate = Object.keys(createInputs).filter(
-      (type) => !existingIds[type]
-    );
+    const toCreate = this.metaobjectDefinitions.map(d => d.type).filter(type => !existingIds[type]);
     
     if (toCreate.length === 0) {
       return;
@@ -144,18 +142,26 @@ export class MetaobjectDefinitionManager {
   }
 
   /**
-   * Sync local definitions with the Shopify schema. By default, definitions that exist on Shopify but no longer locally are not
-   * deleted to avoid data loss. To delete dangling definitions, set `deleteDanglingDefinitions` to true.
-   */
-  async syncFromSchema(opts?: SyncFromSchemaOptions): Promise<void> {
-    throw new Error("Not implemented yet");
-  }
-
-  /**
    * --------------------------------------------------------------------------------------------------------
    * QUERIES
    * --------------------------------------------------------------------------------------------------------
    */
+
+  /**
+   * Find a definition ID by type. This is a simple query that returns the ID of the definition. It is useful to
+   * create various definitions
+   */
+  async findDefinitionIdByType(type: string): Promise<string | null> {
+    const builder = QueryBuilder.query('GetMetaobjectDefinitionByType')
+      .variables({ type: 'String!' })
+      .operation<MetaobjectDefinition>('metaobjectDefinitionByType', { type: '$type' }, metaobjectDefinition => {
+        metaobjectDefinition.fields('id')
+      });
+
+    const { metaobjectDefinitionByType } = (await (await doRequest({ connection: this.connection, builder, variables: { type } })).json()).data;
+
+    return metaobjectDefinitionByType.id;
+  }
 
   /**
    * Find a definition by type. This get most of the information (if you need only the ID, use the `getIdByType` method instead)
@@ -200,7 +206,7 @@ export class MetaobjectDefinitionManager {
           });
       });
 
-    const { metaobjectDefinitionByType } = (await (await doRequest({ builder, variables: { type } })).json()).data;
+    const { metaobjectDefinitionByType } = (await (await doRequest({ connection: this.connection, builder, variables: { type } })).json()).data;
 
     return metaobjectDefinitionByType;
   }
@@ -242,7 +248,7 @@ export class MetaobjectDefinitionManager {
       });
 
     // Perform the request
-    const { metaobjectDefinition, userErrors } = (await (await doRequest({ builder, variables: { definition } })).json()).data.metaobjectDefinitionCreate;
+    const { metaobjectDefinition, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables: { definition } })).json()).data.metaobjectDefinitionCreate;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -262,7 +268,11 @@ export class MetaobjectDefinitionManager {
    * dynamically change the definition.
    */
   async updateDefinition(options: { type: string, definition: MetaobjectDefinitionUpdateInput }): Promise<void> {
-    const id = await this.getCachedDefinitionId(options.type);
+    const id = await this.findDefinitionIdByType(options.type);
+
+    if (!id) {
+      throw new Error(`Metaobject definition with type "${options.type}" does not exist and cannot be updated.`);
+    }
 
     const builder = QueryBuilder.mutation('UpdateMetaobjectDefinition')
       .variables({ id: 'ID!', definition: 'MetaobjectDefinitionUpdateInput!' })
@@ -276,7 +286,7 @@ export class MetaobjectDefinitionManager {
           });
       });
 
-    const { userErrors } = (await (await doRequest({ builder, variables: { id, definition: options.definition } })).json()).data.metaobjectDefinitionUpdate;
+    const { userErrors } = (await (await doRequest({ connection: this.connection, builder, variables: { id, definition: options.definition } })).json()).data.metaobjectDefinitionUpdate;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -288,7 +298,11 @@ export class MetaobjectDefinitionManager {
    * Delete a definition. The deleted definition ID will be returned. This will delete the definition and all its fields so you have to be careful.
    */
   async deleteDefinition(type: string): Promise<string> {
-    const id = await this.getCachedDefinitionId(type);
+    const id = await this.findDefinitionIdByType(type);
+
+    if (!id) {
+      throw new Error(`Metaobject definition with type "${type}" does not exist and cannot be deleted.`);
+    }
 
     const builder = QueryBuilder.mutation('DeleteMetaobjectDefinition')
       .variables({ id: 'ID!' })
@@ -300,7 +314,7 @@ export class MetaobjectDefinitionManager {
           });
       });
 
-    const { deletedId, userErrors } = (await (await doRequest({ builder, variables: { id } })).json()).data.metaobjectDefinitionDelete;
+    const { deletedId, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables: { id } })).json()).data.metaobjectDefinitionDelete;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -344,34 +358,4 @@ export class MetaobjectDefinitionManager {
     }
     return batches;
   }
-
-  /**
-   * Get the metaobject definition ID from the type, or null if it doesn't exist. This is a private method that caches
-   * the ID, and is used exclusively by the `createFromSchema` method. End-users should use the `findDefinitionByType` method
-   * instead to get the full definition.
-   */
-  private async getCachedDefinitionId(type: string): Promise<string | null> {
-    if (this.definitionIdCache.has(type)) {
-      return this.definitionIdCache.get(type)!;
-    }
-
-    const builder = QueryBuilder.query('GetMetaobjectDefinitionByType')
-      .variables({ type: 'String!' })
-      .operation<MetaobjectDefinition>('metaobjectDefinitionByType', { type: '$type' }, metaobjectDefinition => {
-        metaobjectDefinition.fields('id');
-      });
-
-    const { data } = await (await doRequest({ builder, variables: { type } })).json();
-
-    const id = data.metaobjectDefinitionByType?.id ?? null;
-
-    // If we have resolved that ID already we cache it
-    if (id) {
-      this.definitionIdCache.set(type, id);
-    }
-
-    return id;
-  }
 }
-
-export const metaobjectDefinitionManager = new MetaobjectDefinitionManager();

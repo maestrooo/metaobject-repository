@@ -1,15 +1,31 @@
 import { QueryBuilder } from "raku-ql";
-import { MetafieldAccessInput, MetafieldDefinitionCreatePayload, MetafieldDefinitionDeletePayload, MetafieldDefinitionIdentifier, 
+import { 
+  MetafieldAccessInput, MetafieldDefinitionCreatePayload, MetafieldDefinitionDeletePayload, MetafieldDefinitionIdentifier, 
   MetafieldDefinitionInput, MetafieldDefinitionPinPayload, MetafieldDefinitionUnpinPayload, MetafieldDefinitionUpdateInput, 
-  MetafieldDefinitionUpdatePayload, MetafieldDefinitionValidationInput, MetafieldOwnerType, MetaobjectDefinition 
+  MetafieldDefinitionUpdatePayload, MetafieldOwnerType 
 } from "~/types/admin.types";
 import { DefinitionTakenException } from "~/exception";
 import { convertValidations } from "~/utils/metafield-validations";
-import { doRequest } from "~/utils/request";
-import { SchemaProvider } from "~/provider/schema-provider";
+import { ConnectionOptions, doRequest } from "~/utils/request";
+import { MetaobjectDefinitionManager } from "~/metaobjects/metaobject-definition-manager";
+import { MetafieldDefinitionSchema } from "~/types/metafield-definitions";
+
+type ConstructorOptions = {
+  connection: ConnectionOptions;
+  metafieldDefinitions: MetafieldDefinitionSchema;
+  metaobjectDefinitionManager: MetaobjectDefinitionManager;
+}
 
 export class MetafieldDefinitionManager {
-  private metaobjectDefinitionIdCache = new Map<string, string>();
+  private readonly connection: ConnectionOptions;
+  private readonly metafieldDefinitions: MetafieldDefinitionSchema;
+  private readonly metaobjectDefinitionManager: MetaobjectDefinitionManager;
+
+  constructor({ connection, metafieldDefinitions, metaobjectDefinitionManager }: ConstructorOptions) {
+    this.connection = connection;
+    this.metafieldDefinitions = metafieldDefinitions;
+    this.metaobjectDefinitionManager = metaobjectDefinitionManager;
+  }
 
   /**
    * --------------------------------------------------------------------------------------------------------
@@ -22,63 +38,77 @@ export class MetafieldDefinitionManager {
    * manager will attempt to create all definitions and simply fail if any of them already exist.
    */
   async createFromSchema(): Promise<void> {
-    const definitions = SchemaProvider.metafieldDefinitions;
+    // 1) Pre-scan all validations that refer to other metaobject types, so we can resolve their IDs in one batch.
+    const referencedTypes = new Set<string>();
 
-    if (!definitions) {
-      throw new Error('Metafield definitions schema is not set. Call SchemaProvider.setMetafieldDefinitions() first.');
-    }
+    this.metafieldDefinitions.forEach((def) => {
+      convertValidations(def).forEach(({ name, value }) => {
+        if (name === 'metaobject_definition_type') {
+          referencedTypes.add(value);
+        } else if (name === 'metaobject_definition_types') {
+          JSON.parse(value).forEach((t: string) => referencedTypes.add(t));
+        }
+      });
+    });
 
-    const definitionsInput = await Promise.all(
-      definitions.map(async (definition): Promise<MetafieldDefinitionInput> => {
-        const rawValidations = convertValidations(definition);
+    // 2) Lookup each referenced type exactly once
+    const idCache: Record<string, string> = {};
 
-        // We resolve the metaobject and mixed references types to their ID
-        const validations = await Promise.all(
-          rawValidations.map(async ({ name, value }): Promise<MetafieldDefinitionValidationInput> => {
-            // We resolve the metaobject type to their definitions
+    await Promise.all(
+      Array.from(referencedTypes).map(async (type) => {
+        const id = await this.metaobjectDefinitionManager.findDefinitionIdByType(type);
 
-            if (name === 'metaobject_definition_type') {
-              const id = await this.getCachedMetaobjectDefinitionId(value);
-
-              return { name: 'metaobject_definition_id', value: id as string };
-            } else if (name === 'metaobject_definition_types') {
-              const types: string[] = JSON.parse(value as string);
-              const ids = await Promise.all(types.map((v) => this.getCachedMetaobjectDefinitionId(v)));
-
-              return { name: 'metaobject_definition_ids', value: JSON.stringify(ids) };
-            }
-
-            // default: leave untouched
-            return { name, value };
-          })
-        );
-
-        return {
-          name: definition.name,
-          key: definition.key,
-          namespace: definition.namespace,
-          type: definition.type,
-          ownerType: definition.ownerType as MetafieldOwnerType,
-          description: definition.description,
-          access: definition.access as MetafieldAccessInput,
-          pin: definition.pin,
-          capabilities: definition.capabilities,
-          constraints: definition.constraints,
-          validations,
-        };
+        if (!id) {
+          throw new Error(
+            `Cannot resolve metaobject definition "${type}" (not found)`
+          );
+        }
+        idCache[type] = id;
       })
     );
 
-    const settles = await Promise.allSettled(definitionsInput.map(definition => this.createDefinition(definition)));
+    // 3) Now build the "create" inputs, swapping out `metaobject_definition_*` names for the `*_id` versions
+    const inputs: MetafieldDefinitionInput[] = this.metafieldDefinitions.map((def) => {
+      const raw = convertValidations(def);
+      const validations = raw.map(({ name, value }) => {
+        if (name === 'metaobject_definition_type') {
+          return { name: 'metaobject_definition_id', value: idCache[value] };
+        }
 
-    // If any non-DefinitionTaken rejection happened, re-throw the first one:
-    for (const settle of settles) {
-      if (settle.status === 'rejected' && !(settle.reason instanceof DefinitionTakenException)) {
-        throw settle.reason;
+        if (name === 'metaobject_definition_types') {
+          const types: string[] = JSON.parse(value);
+          const ids = types.map((t) => idCache[t]);
+
+          return { name: 'metaobject_definition_ids', value: JSON.stringify(ids) };
+        }
+        return { name, value };
+      });
+
+      return {
+        name: def.name,
+        key: def.key,
+        namespace: def.namespace,
+        type: def.type,
+        ownerType: def.ownerType as MetafieldOwnerType,
+        description: def.description,
+        access: def.access as MetafieldAccessInput,
+        pin: def.pin,
+        capabilities: def.capabilities,
+        constraints: def.constraints,
+        validations,
+      };
+    });
+
+    // 4) Fire off all creations in parallel, swallowing only “TAKEN” errors
+    const results = await Promise.allSettled(
+      inputs.map((input) => this.createDefinition(input))
+    );
+
+    for (const res of results) {
+      if (res.status === "rejected" && !(res.reason instanceof DefinitionTakenException)) {
+        throw res.reason;
       }
     }
-
-    // Otherwise, we either have created all definitions, or some of them already existed, so we're done with the process
   };
 
   /**
@@ -104,7 +134,7 @@ export class MetafieldDefinitionManager {
       });
 
     // Perform the request
-    const { createdDefinition, userErrors } = (await (await doRequest({ builder, variables: { definition } })).json()).data.metafieldDefinitionCreate;
+    const { createdDefinition, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables: { definition } })).json()).data.metafieldDefinitionCreate;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -136,7 +166,7 @@ export class MetafieldDefinitionManager {
       });
 
     // Perform the request
-    const { userErrors } = (await (await doRequest({ builder, variables: { definition } })).json()).data.metafieldDefinitionUpdate;
+    const { userErrors } = (await (await doRequest({ connection: this.connection, builder, variables: { definition } })).json()).data.metafieldDefinitionUpdate;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -162,7 +192,7 @@ export class MetafieldDefinitionManager {
 
     // Perform the request
     const variables = { deleteAllAssociatedMetafields, identifier };
-    const { deletedDefinitionId, userErrors } = (await (await doRequest({ builder, variables })).json()).data.metafieldDefinitionDelete;
+    const { deletedDefinitionId, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metafieldDefinitionDelete;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -187,7 +217,7 @@ export class MetafieldDefinitionManager {
 
     // Perform the request
     const variables = { identifier };
-    const { userErrors } = (await (await doRequest({ builder, variables })).json()).data.metafieldDefinitionPin;
+    const { userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metafieldDefinitionPin;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -210,46 +240,11 @@ export class MetafieldDefinitionManager {
 
     // Perform the request
     const variables = { identifier };
-    const { userErrors } = (await (await doRequest({ builder, variables })).json()).data.metafieldDefinitionUnpin;
+    const { userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metafieldDefinitionUnpin;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
       throw new Error(`Cannot unpin the metafield definition. Reason: ${userErrors[0].message}`);
     }
   }
-
-  /**
-   * --------------------------------------------------------------------------------------------------------------------------------
-   * PRIVATE METHODS
-   * --------------------------------------------------------------------------------------------------------------------------------
-   */
-  
-  /**
-   * Get the metaobject definition ID from the type, or null if it doesn't exist. This is a private method that is used to resolve
-   * metafield definitions whose type is a metaobject reference or mixed reference.
-   */
-  private async getCachedMetaobjectDefinitionId(type: string): Promise<string | null> {
-    if (this.metaobjectDefinitionIdCache.has(type)) {
-      return this.metaobjectDefinitionIdCache.get(type)!;
-    }
-
-    const builder = QueryBuilder.query('GetMetaobjectDefinitionByType')
-      .variables({ type: 'String!' })
-      .operation<MetaobjectDefinition>('metaobjectDefinitionByType', { type: '$type' }, metaobjectDefinition => {
-        metaobjectDefinition.fields('id');
-      });
-
-    const { data } = await (await doRequest({ builder, variables: { type } })).json();
-
-    const id = data.metaobjectDefinitionByType?.id ?? null;
-
-    // If we have resolved that ID already we cache it
-    if (id) {
-      this.metaobjectDefinitionIdCache.set(type, id);
-    }
-
-    return id;
-  }
 }
-
-export const metafieldDefinitionManager = new MetafieldDefinitionManager();

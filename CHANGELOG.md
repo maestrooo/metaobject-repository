@@ -1,3 +1,8 @@
+## 0.17.1
+
+- Fix a bug where the `onPopulate` callback was not properly called for metafield without definition.
+- Ensure that enums are converted to types to make it easier to use.
+
 ## 0.17.0
 
 - [BC] After performance testing, including capabilities and thumbnails (especially on list) can be quite costly. When fetching your own metaobjects,

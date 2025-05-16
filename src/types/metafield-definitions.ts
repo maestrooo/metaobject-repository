@@ -1,7 +1,5 @@
-import type { MetafieldAccessInput, MetafieldCapabilityCreateInput, MetafieldDefinitionConstraintsInput } from "./admin.types";
-import { MetafieldOwnerType } from "./admin.types";
+import type { MetafieldOwnerType, MetafieldAccessInput, MetafieldCapabilityCreateInput, MetafieldDefinitionConstraintsInput } from "./admin.types";
 import type { FieldType, FieldValidations } from "./fields";
-import type { AllowRawEnum } from "./utils";
 
 export type MetafieldDefinitionMap = {
   [T in FieldType]: {
@@ -21,9 +19,9 @@ export type MetafieldBaseDefinition = MetafieldDefinitionMap[keyof MetafieldDefi
  */
 
 export type MetafieldDefinitionSchemaEntry = MetafieldBaseDefinition & {
-  ownerType: AllowRawEnum<MetafieldOwnerType>;
+  ownerType: MetafieldOwnerType;
   namespace?: string;
-  access?: AllowRawEnum<MetafieldAccessInput>;
+  access?: MetafieldAccessInput;
   pin?: boolean;
   capabilities?: MetafieldCapabilityCreateInput;
   constraints?: MetafieldDefinitionConstraintsInput;

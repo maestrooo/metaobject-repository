@@ -25,13 +25,6 @@ export type CamelCaseKeys<T> =
   // otherwise leave it alone
   : T;
 
-export type AllowRawEnum<T> =
-  T extends string
-    ? T | `${T}`
-    : T extends object
-      ? { [K in keyof T]?: AllowRawEnum<T[K]> }
-      : T;
-
 export type PaginationArgs<Dir extends "forward" | "backward"> =
   Dir extends "forward"
     ? { first: number; after?: string; last?: never; before?: never }

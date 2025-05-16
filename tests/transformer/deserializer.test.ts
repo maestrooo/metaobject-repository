@@ -1,74 +1,161 @@
-import { describe, it, expect } from 'vitest'
-import { serializeValue, serializeFields } from '../../src/transformer/serializer';
+import { describe, it, expect } from 'vitest';
+import { deserializeMetafield } from '../../src/transformer/deserializer';
+import type { Metafield } from '../../src/types/admin.types';
 
-describe('serializeValue', () => {
-  it('returns empty string for null, undefined or empty array', () => {
-    expect(serializeValue(null)).toBe('');
-    expect(serializeValue(undefined)).toBe('');
-    expect(serializeValue([])).toBe('');
-  })
-
-  it('leaves plain strings untouched', () => {
-    expect(serializeValue('hello')).toBe('hello');
-    expect(serializeValue('')).toBe(''); // empty string stays empty
-  })
-
-  it('JSON-stringifies an array of primitives', () => {
-    const arr = [1, 2, 'three'];
-    expect(serializeValue(arr)).toBe(JSON.stringify(arr));
-  })
-
-  it('JSON-stringifies an array of objects, snake-casing their keys', () => {
-    const arr = [
-      { fooBar: 'bazBar' },
-      { anotherKey: 123 },
-    ]
-    const result = serializeValue(arr);
-    const parsed = JSON.parse(result);
-
-    expect(parsed).toEqual([
-      { foo_bar: 'bazBar' },
-      { another_key: 123 },
-    ])
-  })
-
-  it('JSON-stringifies a single object, snake-casing its keys', () => {
-    const obj = { someField: 'value', innerMost: { deepKey: true } }
-    const result = serializeValue(obj)
-    const parsed = JSON.parse(result)
-    expect(parsed).toEqual({
-      some_field: 'value',
-      inner_most: { deep_key: true },
-    })
-  })
-})
-
-describe('serializeFields', () => {
-  it('maps each entry to { key: snake(key), value: serializeValue(value) }', () => {
-    const data = {
-      fooBar: 1,
-      someField: null,
-      nestedField: { innerKey: 'v' },
+describe('deserializeMetafield()', () => {
+  it('camel-cases an object jsonValue', () => {
+    const mf: Pick<Metafield, 'id' | 'jsonValue'> = {
+      id: '1',
+      jsonValue: { foo_bar: 123, nested_val: { inner_key: 'v' } },
     }
 
-    const fields = serializeFields(data)
-    expect(fields).toEqual([
-      { key: 'foo_bar',   value: '1' },
-      { key: 'some_field', value: '' },
-      { key: 'nested_field', value: JSON.stringify({ inner_key: 'v' }) },
+    const out = deserializeMetafield({ ...mf })
+    expect(out.jsonValue).toEqual({ fooBar: 123, nestedVal: { innerKey: 'v' } })
+  })
+
+  it('camel-cases each element of an array jsonValue', () => {
+    const mf: Pick<Metafield, 'id' | 'jsonValue'> = {
+      id: '2',
+      jsonValue: [
+        { first_key: 'a' },
+        { second_key: 'b' },
+      ]
+    }
+
+    const out = deserializeMetafield({ ...mf })
+    expect(out.jsonValue).toEqual([
+      { firstKey: 'a' },
+      { secondKey: 'b' },
     ])
   })
 
-  it('handles empty object', () => {
-    expect(serializeFields({})).toEqual([])
+  it('leaves non-object/array jsonValue unchanged', () => {
+    const mf: Pick<Metafield, 'id' | 'jsonValue'> = {
+      id: '3',
+      jsonValue: 'plain'
+    }
+
+    const out = deserializeMetafield({ ...mf })
+    expect(out.jsonValue).toBe('plain')
   })
 
-  it('snake-cases complex keys', () => {
-    const data = { 'already_snake': 'x', 'MixedCASEKey': 'y' }
-    const fields = serializeFields(data)
-    expect(fields).toEqual([
-      { key: 'already_snake', value: 'x' },
-      { key: 'mixed_casekey', value: 'y' },
-    ])
+  it('resolves single reference via deserializeReference', () => {
+    const refObj = { __typename: 'Metaobject', id: 'X', type: 'T', handle: 'h', displayName: 'd', updatedAt: new Date().toISOString(), fields: [] }
+    const mf: Pick<Metafield, 'id' | 'type' | 'reference'> = {
+      id: '4',
+      type: 'metaobject_reference',
+      reference: refObj as any,
+    }
+
+    const out = deserializeMetafield({ ...mf })
+    // should have picked up a system block from deserializeMetaobject:
+    expect(out.reference).toHaveProperty('system');
+    expect(out.reference.system.id).toBe('X');
   })
 })
+
+/*
+describe('deserializeMetaobject()', () => {
+  const base: Omit<Metaobject, '__typename'> = {
+    id: 'OBJ1',
+    type: 'MyType',
+    handle: 'hndl',
+    displayName: 'Display',
+    updatedAt: new Date('2025-01-01T00:00:00Z').toISOString(),
+    capabilities: { publishable: { status: MetaobjectStatus.Active } },
+    thumbnailField: { thumbnail: { hex: '#000000' } },
+    fields: [],
+  }
+
+  it('builds system metadata correctly', () => {
+    const mo = { ...base }
+    const out = deserializeMetaobject(mo)
+    expect(out.system).toEqual({
+      id: 'OBJ1',
+      type: 'MyType',
+      handle: 'hndl',
+      displayName: 'Display',
+      updatedAt: new Date('2025-01-01T00:00:00Z'),
+      capabilities: { publishable: true },
+      thumbnailField: { url: 'x' },
+    })
+  })
+
+  it('camel-cases json fields correctly', () => {
+    const mo: Metaobject = {
+      ...base,
+      fields: [
+        { key: 'some_field', type: 'json', jsonValue: { inner_key: 'v' } },
+      ],
+      __typename: 'Metaobject',
+    }
+
+    const out = deserializeMetaobject(mo)
+    expect(out.someField).toEqual({ innerKey: 'v' })
+  })
+
+  it('parses list fields as array', () => {
+    const mo: Metaobject = {
+      ...base,
+      fields: [
+        { key: 'items', type: 'list.string', jsonValue: ['a','b'] },
+      ],
+      __typename: 'Metaobject',
+    }
+
+    const out = deserializeMetaobject(mo)
+    expect(out.items).toEqual(['a','b'])
+  })
+
+  it('converts boolean strings to booleans', () => {
+    const mo: Metaobject = {
+      ...base,
+      fields: [
+        { key: 'flag', type: 'boolean', jsonValue: 'true' },
+        { key: 'flag2', type: 'boolean', jsonValue: false },
+      ],
+      __typename: 'Metaobject',
+    }
+
+    const out = deserializeMetaobject(mo)
+    expect(out.flag).toBe(true)
+    expect(out.flag2).toBe(false)
+  })
+
+  it('copies primitive fields unchanged', () => {
+    const mo: Metaobject = {
+      ...base,
+      fields: [
+        { key: 'title', type: 'string', jsonValue: 'Hello' },
+      ],
+      __typename: 'Metaobject',
+    }
+
+    const out = deserializeMetaobject(mo)
+    expect(out.title).toBe('Hello')
+  })
+
+  it('resolves top-level reference properties', () => {
+    const childMO = {
+      __typename: 'Metaobject',
+      id: 'C1',
+      type: 'Child',
+      handle: 'c',
+      displayName: 'Child',
+      updatedAt: new Date().toISOString(),
+      fields: [],
+    }
+    const mo: any = {
+      ...base,
+      __typename: 'Metaobject',
+      fields: [],
+      _childRef: { reference: childMO },
+      _manyRefs: { references: { nodes: [ childMO ] } },
+    }
+
+    const out = deserializeMetaobject(mo)
+    expect(out.childRef).toHaveProperty('system')
+    expect(Array.isArray(out.manyRefs)).toBe(true)
+    expect(out.manyRefs[0]).toHaveProperty('system')
+  })
+})*/

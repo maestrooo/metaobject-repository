@@ -1,5 +1,5 @@
 import type { OnPopulateWithoutDefinitionFunc } from "~/utils/builder";
-import type { Metafield, MetafieldsSetInput, PageInfo } from "./admin.types";
+import type { Metafield, MetafieldsSetInput, PageInfo } from "~/types/admin.types";
 import type { PaginationArgs } from "./utils";
 
 export type PickedMetafield = Pick<Metafield, 'id' | 'compareDigest' | 'type' | 'namespace' | 'key' | 'jsonValue'>;

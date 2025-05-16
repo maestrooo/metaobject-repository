@@ -1,8 +1,6 @@
-import type { AppInstallation, HasMetafields, Metafield, MetafieldConnection, MetafieldIdentifierInput, MetafieldsDeletePayload, MetafieldsSetInput, MetafieldsSetPayload } from "~/types/admin.types";
-import { MetafieldOwnerType } from "~/types/admin.types";
+import type { MetafieldOwnerType, AppInstallation, HasMetafields, Metafield, MetafieldConnection, MetafieldIdentifierInput, MetafieldsDeletePayload, MetafieldsSetInput, MetafieldsSetPayload } from "~/types/admin.types";
 import { FieldBuilder, QueryBuilder } from "raku-ql";
 import type { FindOptions, LooseMetafieldsSetInput, PaginatedMetafields, PaginatedMetafieldsWithReference, PickedMetafield, PickedMetafieldWithReference } from "~/types/metafield-repository";
-import type { AllowRawEnum } from "~/types/utils";
 import { type OnPopulateFunc, type OnPopulateWithoutDefinitionFunc, populateReferenceQuery } from "~/utils/builder";
 import { type ConnectionOptions, doRequest } from "~/utils/request";
 import type { MetafieldDefinitionSchema, MetafieldDefinitionSchemaEntry } from "~/types/metafield-definitions";
@@ -46,7 +44,7 @@ export class MetafieldRepository {
           if (opts.populate || opts.onPopulate) {
             this.setupReferenceQuery({ 
               fieldBuilder: metafieldBuilder, 
-              ownerType: MetafieldOwnerType.ApiPermission, 
+              ownerType: 'API_PERMISSION', 
               key: opts.key, 
               namespace: opts.namespace, 
               populate: opts.populate, 
@@ -125,19 +123,19 @@ export class MetafieldRepository {
 
           if (opts.populate || opts.onPopulate) {
             const mapping: Record<string, MetafieldOwnerType> = {
-              'Article': MetafieldOwnerType.Article,
-              'Blog': MetafieldOwnerType.Blog,
-              'Collection': MetafieldOwnerType.Collection,
-              'Company': MetafieldOwnerType.Company,
-              'CompanyLocation': MetafieldOwnerType.CompanyLocation,
-              'Customer': MetafieldOwnerType.Customer,
-              'DraftOrder': MetafieldOwnerType.Draftorder,
-              'Location': MetafieldOwnerType.Location,
-              'Market': MetafieldOwnerType.Market,
-              'Page': MetafieldOwnerType.Page,
-              'Product': MetafieldOwnerType.Product,
-              'ProductVariant': MetafieldOwnerType.Productvariant,
-              'Order': MetafieldOwnerType.Order,
+              'Article': 'ARTICLE',
+              'Blog': 'BLOG',
+              'Collection': 'COLLECTION',
+              'Company': 'COMPANY',
+              'CompanyLocation': 'COMPANY_LOCATION',
+              'Customer': 'CUSTOMER',
+              'DraftOrder': 'DRAFTORDER',
+              'Location': 'LOCATION',
+              'Market': 'MARKET',
+              'Page': 'PAGE',
+              'Product': 'PRODUCT',
+              'ProductVariant': 'PRODUCTVARIANT',
+              'Order': 'ORDER',
             }
 
             this.setupReferenceQuery({ 
@@ -279,18 +277,24 @@ export class MetafieldRepository {
   /**
    * Find a metafield definition
    */
-  private findDefinition(opts: { ownerType: AllowRawEnum<MetafieldOwnerType>, key: string, namespace?: string }): MetafieldDefinitionSchemaEntry | undefined {
+  private findDefinition(opts: { ownerType: MetafieldOwnerType, key: string, namespace?: string }): MetafieldDefinitionSchemaEntry | undefined {
     return this.metafieldDefinitions.find(def => def.key === opts.key && def.namespace === opts.namespace && def.ownerType === opts.ownerType);
   }
 
   /**
    * For reference metafields, set up the query to fetch the reference or references objects
    */
-  private setupReferenceQuery(opts: { fieldBuilder: FieldBuilder, ownerType: AllowRawEnum<MetafieldOwnerType>, key: string, namespace?: string, populate?: boolean | string[], onPopulate?: OnPopulateFunc }): void {
+  private setupReferenceQuery(opts: { fieldBuilder: FieldBuilder, ownerType: MetafieldOwnerType, key: string, namespace?: string, populate?: boolean | string[], onPopulate?: OnPopulateFunc }): void {
     const definition = this.findDefinition(opts);
 
-    if (!definition?.type.includes('_reference')) {
-      return;
+    if (definition && !definition.type.includes('_reference')) {
+      return; // We have a definition but it's not a reference metafield, nothing to complete
+    }
+
+    if (!definition) {
+      // If we don't have a definition, we can't infer the type to populate, so we just call the onPopulate function
+      // and let the user decide what to do
+      return opts.onPopulate?.({ fieldBuilder: opts.fieldBuilder });
     }
 
     const populate = Array.isArray(opts.populate) ? opts.populate : [];

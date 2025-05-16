@@ -2,6 +2,21 @@ import { toSnake, snake } from 'snake-camel';
 import type { MetaobjectFieldInput } from '~/types/admin.types';
 
 /**
+ * Try to detect a rich text value. This is not 100% reliable, but for now it should be enough
+ */
+function isRichTextValue(value: object): boolean {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  if (!('type' in value && value['type'] === 'root' && 'children' in value)) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Serialize a single value to the format suitable for Shopify
  */
 export function serializeValue(value: any): string {
@@ -16,6 +31,12 @@ export function serializeValue(value: any): string {
   // Otherwise, we make sure that we snakeCase
   if (Array.isArray(value)) {
     return JSON.stringify(value.map(toSnake));
+  }
+
+  // There is an exception that MUST NOT be snake_cased, it is for the rich text field, that uses camelCase.
+  // Unfortunately, we don't carry the type of the field here, so we are trying to detect it by the value
+  if (isRichTextValue(value)) {
+    return JSON.stringify(value);
   }
 
   return JSON.stringify(toSnake(value));

@@ -1,5 +1,3 @@
-### This section has not been updated yet to reflect latest changes
-
 # Managing Definitions
 
 This section explains how to create, retrieve, and update Shopify metafield definitions. The process is similar to metaobject definitions, with a few important differences.
@@ -14,10 +12,9 @@ Create a `definitions.ts` file somewhere in your code, and export your definitio
 at the end to get type validation.
 
 ```ts
-import { MetaobjectAdminAccessInput, MetaobjectStorefrontAccess } from "~/types/admin.types";
 import { MetafieldDefinitionSchema } from "metaobject-repository";
 
-export const definitions = [
+export const metafieldDefinitions = [
   {
     type: "single_line_text_field",
     ownerType: "PRODUCT",
@@ -54,16 +51,16 @@ is created, those types are automatically resolved to an ID.
 
 ### Creating a schema
 
-Use the `metafieldDefinitionManager` to automatically create metafield definitions from a static schema:
+Get the `metafieldDefinitionManager` from the `createContext` to automatically create metafield definitions from a static schema:
 
 ```ts
-import { metafieldDefinitionManager } from "metaobject-repository";
-import { definitions } from "./your-definitions";
+import { createContext } from "metaobject-repository";
+import { metafieldDefinitions } from "./your-definitions";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
+  const { metafieldDefinitionManager } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
 
-  metafieldDefinitionManager.withClient(admin.graphql);
   await metafieldDefinitionManager.createFromSchema(definitions);
 
   return null;
@@ -74,6 +71,8 @@ This method does a few things automatically:
 
 - It creates all the definitions.
 - If a definition already exists, it is skipped.
+
+Because metafields can reference metaobjects, we recommend that you first create metaobject definitions and then metafield definitions.
 
 > ⏱ This can be slow if you have many definitions. We recommend you to create the definitions once, and then save an app metafield (for instance) to indicate that you have already initialized the definitions.
 
@@ -90,11 +89,12 @@ In advanced use cases, you might want to manage definitions manually. To do that
 ### Creating a definition
 
 ```ts
-import { metafieldDefinitionManager } from "metaobject-repository";
+import { createContext } from "metaobject-repository";
+import { metafieldDefinitions } from "your-definitions.ts";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  metafieldDefinitionManager.withClient(admin.graphql);
+  const { metafieldDefinitionManager } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
 
   const createdId = await metafieldDefinitionManager.createDefinition({ 
     type: "single_line_text_field", 
@@ -111,11 +111,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 ### Updating a definition
 
 ```ts
-import { metafieldDefinitionManager } from "metaobject-repository";
+import { createContext } from "metaobject-repository";
+import { metafieldDefinitions } from "your-definitions.ts";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  metafieldDefinitionManager.withClient(admin.graphql);
+  const { metafieldDefinitionManager } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
 
   const createdId = await metafieldDefinitionManager.updateDefinition({ 
     type: "single_line_text_field", 
@@ -133,11 +134,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 ### Deleting a definition
 
 ```ts
-import { metafieldDefinitionManager } from "metaobject-repository";
+import { createContext } from "metaobject-repository";
+import { metafieldDefinitions } from "your-definitions.ts";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  metafieldDefinitionManager.withClient(admin.graphql);
+  const { metafieldDefinitionManager } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
 
   const deletedId = await metafieldDefinitionManager.deleteDefinition({ 
     key: "foo", 
@@ -154,11 +156,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 ### Pinning a definition
 
 ```ts
-import { metafieldDefinitionManager } from "metaobject-repository";
+import { createContext } from "metaobject-repository";
+import { metafieldDefinitions } from "your-definitions.ts";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  metafieldDefinitionManager.withClient(admin.graphql);
+  const { metafieldDefinitionManager } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
 
   await metafieldDefinitionManager.pinDefinition({ key: "foo", ownerType: "PRODUCT" });
 
@@ -171,11 +174,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 ### Unpinning a definition
 
 ```ts
-import { metafieldDefinitionManager } from "metaobject-repository";
+import { createContext } from "metaobject-repository";
+import { metafieldDefinitions } from "your-definitions.ts";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  metafieldDefinitionManager.withClient(admin.graphql);
+  const { metafieldDefinitionManager } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
 
   await metafieldDefinitionManager.unpinDefinition({ key: "foo", ownerType: "PRODUCT" });
 
@@ -187,4 +191,5 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 ## Best practice
 
-Use `createFromSchema` for reliable setup during app installation or migration, or use the `createDefinition` or `updateDefinition` only when you need dynamic control or one-off changes outside of the schema.
+- Use `createFromSchema` for reliable setup during app installation or migration, or use the `createDefinition` or `updateDefinition` only when you need dynamic control or one-off changes outside of the schema.
+- Due to potential dependencies, create first your metaobject definitions and then your metafield definitions.

@@ -1,7 +1,7 @@
 import type { JSONSchema, FromSchema } from "json-schema-to-ts";
 import type { MetaobjectAccessInput, MetaobjectThumbnail, MetaobjectCapabilityDataOnlineStore, MetaobjectCapabilityDataPublishable, MetaobjectCapabilityCreateInput } from "~/types/admin.types";
 import type { BaseFieldType, DefaultMap, FileMapping, FileTypeVal, MaybeNullableNonList, PopulatedMap } from "./fields";
-import type { AllowRawEnum, CamelCase, CamelCaseKeys, Head, Tail } from "./utils";
+import type { CamelCase, CamelCaseKeys, Head, Tail } from "./utils";
 import type { MetafieldBaseDefinition } from "./metafield-definitions";
 
 /**
@@ -54,7 +54,7 @@ export type MetaobjectDefinitionSchemaEntry = {
   name: string;
   description?: string;
   displayNameKey?: string;
-  access?: AllowRawEnum<MetaobjectAccessInput>;
+  access?: MetaobjectAccessInput;
   capabilities?: MetaobjectCapabilityCreateInput;
   fields: readonly MetaobjectFieldDefinition[];
 };

@@ -1,3 +1,11 @@
+## 0.17.3
+
+- After further consideration, rich text metafields are returned as it is, instead of being converted to HTML. This makes it safer when you want to feed the JSON to a rich text editor.
+
+## 0.17.2
+
+- Rich text metafield are converted to HTML automatically.
+
 ## 0.17.1
 
 - Fix a bug where the `onPopulate` callback was not properly called for metafield without definition.

@@ -220,7 +220,7 @@ export class MetafieldRepository {
       .operation<MetafieldsSetPayload>('metafieldsSet', { metafields: '$metafields' }, metafieldsSet => {
         metafieldsSet
           .object('metafields', metafields => {
-            metafields.fields('id', 'key', 'namespace', 'jsonValue');
+            metafields.fields('id', 'compareDigest', 'type', 'namespace', 'key', 'jsonValue');
           })
           .object('userErrors', userErrors => {
             userErrors.fields('code', 'field', 'message');

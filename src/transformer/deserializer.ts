@@ -1,6 +1,23 @@
 import { toCamel, camel } from "snake-camel";
 import type { Metafield, Metaobject } from "~/types/admin.types";
 
+function deserializeValue(value: any, type: string): any {
+  if (type.startsWith('list.')) {
+    return value ?? [];
+  } else if (type === 'json') {
+    if (Array.isArray(value)) {
+      return value.map(toCamel);
+    } else {
+      return toCamel(value);
+    }
+  } else if (type === 'boolean') {
+    // By default Shopify saves booleans as strings, so we need to convert them to boolean
+    return value === 'true' || value === true;
+  } else {
+    return value;
+  }
+}
+
 function deserializeReference(valueForKey: any): any {
   if (valueForKey?.['__typename'] === 'Metaobject') {
     return deserializeMetaobject(valueForKey);
@@ -15,11 +32,7 @@ function deserializeReference(valueForKey: any): any {
 export function deserializeMetafield(metafield: Metafield): any {
   const data: any = metafield;
 
-  if (Array.isArray(data.jsonValue)) {
-    data.jsonValue = data.jsonValue.map(toCamel);
-  } else if (typeof data.jsonValue === 'object') {
-    data.jsonValue = toCamel(data.jsonValue);
-  }
+  data.jsonValue = deserializeValue(metafield.jsonValue, metafield.type);
   
   // Handle the references
   if (data.hasOwnProperty('reference') && data['reference'] !== null) {
@@ -50,21 +63,7 @@ export function deserializeMetaobject<T>(metaobject: Metaobject): T {
 
   metaobject.fields?.forEach((field) => {
     const key = camel(field.key);
-
-    if (field.type.startsWith('list.')) {
-      data[key] = field.jsonValue ?? [];
-    } else if (field.type === 'json') {
-      if (Array.isArray(field.jsonValue)) {
-        data[key] = field.jsonValue.map(toCamel);
-      } else {
-        data[key] = toCamel(field.jsonValue);
-      }
-    } else if (field.type === 'boolean') {
-      // By default Shopify saves booleans as strings, so we need to convert them to boolean
-      data[key] = field.jsonValue === 'true' || field.jsonValue === true;
-    } else {
-      data[key] = field.jsonValue;
-    }
+    data[key] = deserializeValue(field.jsonValue, field.type);
   });
 
   for (const key in metaobject) {

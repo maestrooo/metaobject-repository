@@ -3,9 +3,21 @@ import { deserializeMetafield } from '../../src/transformer/deserializer';
 import type { Metafield } from '../../src/types/admin.types';
 
 describe('deserializeMetafield()', () => {
-  it('camel-cases an object jsonValue', () => {
-    const mf: Pick<Metafield, 'id' | 'jsonValue'> = {
+  it('convert empty list to empty array', () => {
+    const mf: Pick<Metafield, 'id' | 'type' | 'jsonValue'> = {
       id: '1',
+      type: 'list.single_line_text_field',
+      jsonValue: null,
+    }
+
+    const out = deserializeMetafield({ ...mf })
+    expect(out.jsonValue).toEqual([])
+  })
+
+  it('camel-cases an object jsonValue', () => {
+    const mf: Pick<Metafield, 'id' | 'type' | 'jsonValue'> = {
+      id: '1',
+      type: 'json',
       jsonValue: { foo_bar: 123, nested_val: { inner_key: 'v' } },
     }
 
@@ -14,8 +26,9 @@ describe('deserializeMetafield()', () => {
   })
 
   it('camel-cases each element of an array jsonValue', () => {
-    const mf: Pick<Metafield, 'id' | 'jsonValue'> = {
+    const mf: Pick<Metafield, 'id' | 'type' | 'jsonValue'> = {
       id: '2',
+      type: 'json',
       jsonValue: [
         { first_key: 'a' },
         { second_key: 'b' },
@@ -30,8 +43,9 @@ describe('deserializeMetafield()', () => {
   })
 
   it('leaves non-object/array jsonValue unchanged', () => {
-    const mf: Pick<Metafield, 'id' | 'jsonValue'> = {
+    const mf: Pick<Metafield, 'id' | 'type' | 'jsonValue'> = {
       id: '3',
+      type: 'single_line_text_field',
       jsonValue: 'plain'
     }
 

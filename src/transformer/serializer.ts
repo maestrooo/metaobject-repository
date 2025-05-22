@@ -24,10 +24,6 @@ export function serializeValue(value: any): string {
     return '';
   }
 
-  if (typeof value === 'string') {
-    return value;
-  }
-
   // Otherwise, we make sure that we snakeCase
   if (Array.isArray(value)) {
     return JSON.stringify(value.map(toSnake));
@@ -39,7 +35,12 @@ export function serializeValue(value: any): string {
     return JSON.stringify(value);
   }
 
-  return JSON.stringify(toSnake(value));
+  // If an object, we JSONify it
+  if (typeof value === 'object') {
+    return JSON.stringify(toSnake(value));
+  }
+
+  return String(value);
 }
 
 /**

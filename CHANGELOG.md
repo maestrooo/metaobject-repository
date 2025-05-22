@@ -1,3 +1,7 @@
+## 0.17.4
+
+- Improve the serialization of boolean. You can now properly pass boolean as boolean, and the library will automatically convert them to string.
+
 ## 0.17.3
 
 - After further consideration, rich text metafields are returned as it is, instead of being converted to HTML. This makes it safer when you want to feed the JSON to a rich text editor.

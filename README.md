@@ -133,3 +133,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 * Adding an `export` method to the repository to export up to 250 metaobjects.
 * Adding a `bulkExport` method to export any number of metaobjects, using the bulk API.
 * Adding a `syncFromSchema` method on the definition manager to sync definitions.
+
+
+
+IDEA:
+
+we should generate the following metadata:
+
+__METAOBJECT_METADATA__ = {
+  '$app:type' = {
+    fields: {
+      foo: product_reference
+    }
+  }
+}

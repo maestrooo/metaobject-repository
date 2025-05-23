@@ -10,9 +10,13 @@
   ],
   "scripts": {
     "build": "tsup",
+    "build:cli": "tsc --outDir bin/ cli/generate-globals.ts",
     "test": "vitest run",
     "dev": "vite",
     "graphql-codegen": "graphql-codegen"
+  },
+  "bin": {
+    "generate-globals": "./bin/generate-globals"
   },
   "repository": {
     "type": "git",
@@ -35,6 +39,8 @@
   "devDependencies": {
     "@shopify/api-codegen-preset": "^1.1.7",
     "@shopify/shopify-app-remix": "^3.8.2",
+    "@iarna/toml": "2.2.5",
+    "lodash": "^4.17.21",
     "json-schema-to-ts": "^3.1.1",
     "tsup": "^8.4.0",
     "typescript": "^5.8.3",

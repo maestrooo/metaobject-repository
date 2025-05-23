@@ -6,12 +6,12 @@ This section explains how to interact with metaobjects using the repository API.
 
 ## Setup
 
-Before performing any operations, make sure to set a GraphQL client by using the `createContext` method:
+Before performing any operations, make sure to set a GraphQL client by using the `createAdminContext` method:
 
 ```ts
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const { eventRepository } = createContext({ connection: { client: admin.graphql }, metaobjectDefinitions})
+  const { eventRepository } = createAdminContext({ client: admin.graphql, metaobjectDefinitions})
 
   eventRepository.withClient(admin.graphql);
 }

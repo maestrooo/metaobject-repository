@@ -1,3 +1,7 @@
+## 0.18.0
+
+- [BC] To allow support for different kind of environments (admin API, direct access, storefront API...), the `createContext` method has been replaced by three dedicated functions: `createAdminContext`, `createDirectAccessContext` and `createStorefrontApiContext`. You now must use the appropriate method based on the context you intent to use the library.
+
 ## 0.17.4
 
 - Improve the serialization of boolean. You can now properly pass boolean as boolean, and the library will automatically convert them to string.

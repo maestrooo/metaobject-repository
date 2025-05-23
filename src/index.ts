@@ -17,4 +17,4 @@ export { extractFindParams } from './utils/params';
 export type { OnPopulateFunc, OnPopulateWithoutDefinitionFunc } from './utils/builder';
 export type { ConnectionOptions } from './utils/request';
 
-export { createContext } from './create-context';
+export { createAdminContext, createDirectAccessContext, createStorefrontApiContext } from './create-context';

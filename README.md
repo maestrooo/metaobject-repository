@@ -14,6 +14,13 @@ npm install metaobject-repository
 
 ## 🚀 Quick Start
 
+This library can be used in different environements:
+
+* In Remix loader and actions for Shopify embedded app (using an authenticated GraphQL client).
+* In Remix client loaders for Shopify embedded app using the direct access API.
+* In Admin UI extensions using the direct access API.
+* [TO BE DONE] In other contexts using the Storefront API.
+
 ### Metaobjects
 
 A minimal example to define a schema, create a metaobject, and delete it.
@@ -48,7 +55,7 @@ import { createContext } from "metaobject-repository";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   
-  const { eventRepository, metaobjectDefinitionManager } = createContext({ connection: { client: admin.graphql }, metaobjectDefinitions });
+  const { eventRepository, metaobjectDefinitionManager } = createAdminContext({ client: admin.graphql, metaobjectDefinitions });
 
   // Create the schema on Shopify (dependencies between schemas are automatically resolved)
   await metaobjectDefinitionManager.createFromSchema();
@@ -90,7 +97,7 @@ import { createContext } from "metaobject-repository";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   
-  const { metafieldRepository, metafieldDefinitionManager } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
+  const { metafieldRepository, metafieldDefinitionManager } = createAdminContext({ client: admin.graphql, metafieldDefinitions });
 
   // Create the schema on Shopify (dependencies between schemas are automatically resolved)
   await metafieldDefinitionManager.createFromSchema();

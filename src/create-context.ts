@@ -1,3 +1,5 @@
+import type { AdminOperations } from "@shopify/admin-api-client";
+import type { AdminGraphqlClient } from "@shopify/shopify-app-remix/server";
 import { MetafieldDefinitionManager } from "./metafields/metafield-definition-manager";
 import { MetafieldRepository } from "./metafields/metafield-repository";
 import { MetaobjectDefinitionManager } from "./metaobjects/metaobject-definition-manager";
@@ -10,6 +12,24 @@ import type { ConnectionOptions } from "./utils/request";
 
 type CreateContextOptions<MOD extends MetaobjectDefinitionSchema, MFD extends MetafieldDefinitionSchema> = {
   connection: ConnectionOptions;
+  metaobjectDefinitions?: MOD;
+  metafieldDefinitions?: MFD
+}
+
+type CreateAdminContextOptions<MOD extends MetaobjectDefinitionSchema, MFD extends MetafieldDefinitionSchema> = {
+  client: AdminGraphqlClient<AdminOperations>;
+  metaobjectDefinitions?: MOD;
+  metafieldDefinitions?: MFD
+}
+
+type CreateDirectAccessContextOptions<MOD extends MetaobjectDefinitionSchema, MFD extends MetafieldDefinitionSchema> = {
+  metaobjectDefinitions?: MOD;
+  metafieldDefinitions?: MFD
+}
+
+type CreateStorefrontApiContextOptions<MOD extends MetaobjectDefinitionSchema, MFD extends MetafieldDefinitionSchema> = {
+  shopDomain: string;
+  storefrontAccessToken: string;
   metaobjectDefinitions?: MOD;
   metafieldDefinitions?: MFD
 }
@@ -34,8 +54,7 @@ export type AppContext<MOD extends MetaobjectDefinitionSchema, MFD extends Metaf
   metafieldRepository: MetafieldRepository;
 } & MetaobjectRepositories<MOD>;
 
-// 5. The implementation
-export function createContext<MOD extends MetaobjectDefinitionSchema, MFD extends MetafieldDefinitionSchema> (
+function createContext<MOD extends MetaobjectDefinitionSchema, MFD extends MetafieldDefinitionSchema> (
   {
     connection,
     metaobjectDefinitions = [] as unknown as MOD,
@@ -68,4 +87,40 @@ export function createContext<MOD extends MetaobjectDefinitionSchema, MFD extend
     storefrontTokenRepository,
     ...repositories,
   } as AppContext<MOD, MFD>;
+}
+
+export function createAdminContext<MOD extends MetaobjectDefinitionSchema, MFD extends MetafieldDefinitionSchema> (
+  options: CreateAdminContextOptions<MOD, MFD>
+): AppContext<MOD, MFD> {
+  return createContext({
+    ...options,
+    connection: {
+      type: 'admin',
+      client: options.client
+    },
+  });
+}
+
+export function createDirectAccessContext<MOD extends MetaobjectDefinitionSchema, MFD extends MetafieldDefinitionSchema> (
+  options: CreateDirectAccessContextOptions<MOD, MFD>
+): AppContext<MOD, MFD> {
+  return createContext({
+    ...options,
+    connection: {
+      type: 'direct_access',
+    },
+  });
+}
+
+export function createStorefrontApiContext<MOD extends MetaobjectDefinitionSchema, MFD extends MetafieldDefinitionSchema> (
+  options: CreateStorefrontApiContextOptions<MOD, MFD>
+): AppContext<MOD, MFD> {
+  return createContext({
+    ...options,
+    connection: {
+      type: 'storefront',
+      shopDomain: options.shopDomain,
+      storefrontAccessToken: options.storefrontAccessToken,
+    },
+  });
 }

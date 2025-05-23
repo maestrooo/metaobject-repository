@@ -51,15 +51,15 @@ is created, those types are automatically resolved to an ID.
 
 ### Creating a schema
 
-Get the `metafieldDefinitionManager` from the `createContext` to automatically create metafield definitions from a static schema:
+Get the `metafieldDefinitionManager` from the `createAdminContext` to automatically create metafield definitions from a static schema:
 
 ```ts
-import { createContext } from "metaobject-repository";
+import { createAdminContext } from "metaobject-repository";
 import { metafieldDefinitions } from "./your-definitions";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const { metafieldDefinitionManager } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
+  const { metafieldDefinitionManager } = createAdminContext({ client: admin.graphql, metafieldDefinitions });
 
   await metafieldDefinitionManager.createFromSchema(definitions);
 
@@ -89,12 +89,12 @@ In advanced use cases, you might want to manage definitions manually. To do that
 ### Creating a definition
 
 ```ts
-import { createContext } from "metaobject-repository";
+import { createAdminContext } from "metaobject-repository";
 import { metafieldDefinitions } from "your-definitions.ts";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const { metafieldDefinitionManager } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
+  const { metafieldDefinitionManager } = createAdminContext({ client: admin.graphql, metafieldDefinitions });
 
   const createdId = await metafieldDefinitionManager.createDefinition({ 
     type: "single_line_text_field", 
@@ -111,12 +111,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 ### Updating a definition
 
 ```ts
-import { createContext } from "metaobject-repository";
+import { createAdminContext } from "metaobject-repository";
 import { metafieldDefinitions } from "your-definitions.ts";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const { metafieldDefinitionManager } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
+  const { metafieldDefinitionManager } = createAdminContext({ client: admin.graphql, metafieldDefinitions });
 
   const createdId = await metafieldDefinitionManager.updateDefinition({ 
     type: "single_line_text_field", 
@@ -134,12 +134,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 ### Deleting a definition
 
 ```ts
-import { createContext } from "metaobject-repository";
+import { createAdminContext } from "metaobject-repository";
 import { metafieldDefinitions } from "your-definitions.ts";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const { metafieldDefinitionManager } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
+  const { metafieldDefinitionManager } = createAdminContext({ client: admin.graphql, metafieldDefinitions });
 
   const deletedId = await metafieldDefinitionManager.deleteDefinition({ 
     key: "foo", 
@@ -156,12 +156,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 ### Pinning a definition
 
 ```ts
-import { createContext } from "metaobject-repository";
+import { createAdminContext } from "metaobject-repository";
 import { metafieldDefinitions } from "your-definitions.ts";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const { metafieldDefinitionManager } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
+  const { metafieldDefinitionManager } = createAdminContext({ client: admin.graphql, metafieldDefinitions });
 
   await metafieldDefinitionManager.pinDefinition({ key: "foo", ownerType: "PRODUCT" });
 
@@ -174,12 +174,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 ### Unpinning a definition
 
 ```ts
-import { createContext } from "metaobject-repository";
+import { createAdminContext } from "metaobject-repository";
 import { metafieldDefinitions } from "your-definitions.ts";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const { metafieldDefinitionManager } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
+  const { metafieldDefinitionManager } = createAdminContext({ client: admin.graphql, metafieldDefinitions });
 
   await metafieldDefinitionManager.unpinDefinition({ key: "foo", ownerType: "PRODUCT" });
 

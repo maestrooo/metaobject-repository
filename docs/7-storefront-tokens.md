@@ -9,11 +9,11 @@ The `metaobject-repository` library includes a lightweight wrapper to manage Sho
 Before calling any method, connect the authenticated GraphQL client:
 
 ```ts
-import { storefrontTokenRepository } from "metaobject-repository";
+import { createAdminContext, storefrontTokenRepository } from "metaobject-repository";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const { storefrontTokenRepository } = createContext({ connection: { client: admin.graphql }});
+  const { storefrontTokenRepository } = createAdminContext({ client: admin.graphql });
 }
 ```
 

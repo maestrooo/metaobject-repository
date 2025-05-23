@@ -4,10 +4,28 @@ import type { AdminGraphqlClient } from "@shopify/shopify-app-remix/server";
 import { OperationBuilder } from "raku-ql";
 import { apiVersion as defaultApiVersion } from "~/version";
 
-export type ConnectionOptions = {
-  client?: AdminGraphqlClient<AdminOperations>;
-  allowDirectAccess?: boolean;
-}
+type AdminConnection = {
+  type: 'admin';
+  client: AdminGraphqlClient<AdminOperations>;
+  shopDomain?: never;
+  storefrontAccessToken?: never;
+};
+
+type StorefrontConnection = {
+  type: 'storefront';
+  storefrontAccessToken: string;
+  shopDomain: string;
+  client?: never;
+};
+
+type DirectAccessConnection = {
+  type: 'direct_access';
+  client?: never;
+  shopDomain?: never;
+  storefrontAccessToken?: never;
+};
+
+export type ConnectionOptions = AdminConnection | StorefrontConnection | DirectAccessConnection;
 
 type FuncReturnType = ReturnType<AdminGraphqlClient<AdminOperations>>;
 
@@ -22,23 +40,35 @@ export function doRequest({ connection, builder, variables, apiVersion }: DoRequ
   const apiVersionToUse = (apiVersion ?? defaultApiVersion) as ApiVersion;
 
   if (typeof window !== 'undefined') {
-    if (!connection.allowDirectAccess) {
-      throw new Error('In the browser, only direct access is allowed. Set `allowDirectAccess` to true in the connection options.');
+    if (connection.type === 'admin') {
+      throw new Error('Admin access cannot be used in the browser. To use it in the browser, either use the `createDirectAccessContext` or `createStorefrontApiContext` functions.');
     }
 
-    // If we are in the browser and that we allow direct access we can use that instead as it is faster
-    return fetch(`shopify:admin/api/${apiVersionToUse}/graphql.json`, {
-      method: 'POST',
-      body: JSON.stringify({
-        query: builder.build(),
-        variables
-      }),
-    });
+    if (connection.type === 'direct_access') {
+      return fetch(`shopify:admin/api/${apiVersionToUse}/graphql.json`, {
+        method: 'POST',
+        body: JSON.stringify({
+          query: builder.build(),
+          variables
+        }),
+      });
+    } else if (connection.type === 'storefront') {
+      let shopDomain = connection.shopDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      shopDomain = shopDomain.endsWith('.myshopify.com') ? shopDomain : `${shopDomain}.myshopify.com`;
+
+      return fetch(`https://${shopDomain}/api/${apiVersionToUse}/graphql.json`, {
+        method: 'POST',
+        body: JSON.stringify({
+          query: builder.build(),
+          variables
+        }),
+      });
+    }
   }
 
-  if (connection.client) {
+  if (connection.type === 'admin') {
     return connection.client(builder.build(), { variables, apiVersion: apiVersionToUse });
   }
 
-  throw new Error('GraphQL client is not set in the server.');
+  throw new Error('No valid connection found. Use the `createDirectAccessContext`, `createStorefrontApiContext` or `createAdminContext` functions to create a valid connection.');
 }

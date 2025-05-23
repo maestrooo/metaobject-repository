@@ -118,15 +118,15 @@ is created, dependencies are automatically resolved, and definitions are creatin
 
 ### Creating a schema
 
-Use the `createContext` to retrieve authentified objects, and get the `metaobjectDefinitionManager`:
+Use the `create*Context` to retrieve authentified objects, and get the `metaobjectDefinitionManager`:
 
 ```ts
-import { createContext } from "metaobject-repository";
+import { createAdminContext } from "metaobject-repository";
 import { metaobjectDefinitions } from "./your-definitions";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const { metaobjectDefinitionManager } = createContext({ connection: { client: admin.graphql }, metaobjectDefinitions });
+  const { metaobjectDefinitionManager } = createAdminContext({ client: admin.graphql, metaobjectDefinitions });
 
   await metaobjectDefinitionManager.createFromSchema(definitions);
 
@@ -156,12 +156,12 @@ to customize a definition on a per-merchant basis.
 ### Updating a definition
 
 ```ts
-import { createContext } from "metaobject-repository";
+import { createAdminContext } from "metaobject-repository";
 import { metaobjectDefinitions } from "./your-definitions";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const { metaobjectDefinitionManager } = createContext({ connection: { client: admin.graphql }, metaobjectDefinitions });
+  const { metaobjectDefinitionManager } = createAdminContext({ client: admin.graphql, metaobjectDefinitions });
 
   await metaobjectDefinitionManager.updateDefinition({
     type: "$app:event",
@@ -187,11 +187,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 ### Deleting a definition
 
 ```ts
-import { createContext } from "metaobject-repository";
+import { createAdminContext } from "metaobject-repository";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const { metaobjectDefinitionManager } = createContext({ connection: { client: admin.graphql }, metaobjectDefinitions });
+  const { metaobjectDefinitionManager } = createAdminContext({ client: admin.graphql, metaobjectDefinitions });
 
   const deletedId = await metaobjectDefinitionManager.deleteDefinition("$app:event");
 
@@ -207,10 +207,10 @@ Most of the time, you will use the `createFromSchema` from the definition manage
 and handle the dependencies between metaobjects automatically.
 
 ```ts
-import { createContext } from "metaobject-repository";
+import { createAdminContext } from "metaobject-repository";
 import { metaobjectDefinitions } from "./your-definitions";
 
-const { metaobjectDefinitionManager } = createContext({ connection: { client: admin.graphql }, metaobjectDefinitions });
+const { metaobjectDefinitionManager } = createAdminContext({ client: admin.graphql, metaobjectDefinitions });
 
 const createdId = await metaobjectDefinitionManager.createDefinition({
   definition: {
@@ -231,10 +231,10 @@ const createdId = await metaobjectDefinitionManager.createDefinition({
 ### Retrieving definitions
 
 ```ts
-import { createContext } from "metaobject-repository";
+import { createAdminContext } from "metaobject-repository";
 import { metaobjectDefinitions } from "./your-definitions";
 
-const { metaobjectDefinitionManager } = createContext({ connection: { client: admin.graphql }, metaobjectDefinitions });
+const { metaobjectDefinitionManager } = createAdminContext({ client: admin.graphql, metaobjectDefinitions });
 
 const definition = await metaobjectDefinitionManager.findDefinitionByType("$app:event");
 // or

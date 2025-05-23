@@ -6,28 +6,28 @@ This section explains how to interact with metafields using the repository API. 
 
 ## Setup
 
-Before using metafield operations, make sure that you create a repository with the `createContext`:
+Before using metafield operations, make sure that you create a repository with the `create*Context`:
 
 ```ts
-import { createContext } from "metaobject-repository";
+import { createAdminContext } from "metaobject-repository";
 import { metafieldDefinitions } from "your-definitions";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const { metafieldRepository } = createContext({ connection: { client: admin.graphql }, metafieldDefinitions });
+  const { metafieldRepository } = createAdminContext({ client: admin.graphql, metafieldDefinitions });
 }
 ```
 
 The definitions are optional. If you are interacting with unstructured metafields or metafields that you don't own, simply don't pass the definitions. Passing a definition schema primarily allows to automatically populate references based on the reference type.
 
-As for metaobject repositories, you can also use the metafield repository directly in the browser (for App Bridge apps only) by omitting the client, and using the `allowDirectAccess` option:
+As for metaobject repositories, you can also use the metafield repository directly in the browser (for App Bridge apps only) by omitting the client with the `createDirectAccessContext`:
 
 ```ts
-import { createContext } from "metaobject-repository";
+import { createDirectAccessContext } from "metaobject-repository";
 import { metafieldDefinitions } from "your-definitions";
 
 export const clientLoader = async ({ request, params }: ClientLoaderFunctionArgs) => {
-  const { metafieldRepository } = createContext({ connection: { allowDirectAccess: true }, metafieldDefinitions });
+  const { metafieldRepository } = createDirectAccessContext({ metafieldDefinitions });
 }
 ```
 

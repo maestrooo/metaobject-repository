@@ -12,7 +12,6 @@ export { StorefrontTokenRepository } from './storefront-tokens/storefront-token-
 export { NotFoundException, UserErrorsException, DefinitionTakenException } from './exception';
 
 export { flattenFields } from './utils/flatten';
-export { fieldsDifference } from './utils/difference';
 export { extractFindParams } from './utils/params';
 export type { OnPopulateFunc, OnPopulateWithoutDefinitionFunc } from './utils/builder';
 export type { ConnectionOptions } from './utils/request';

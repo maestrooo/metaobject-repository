@@ -1,3 +1,7 @@
+## 0.19.0
+
+- [BC] Removing the `fieldsDifference` method from this package. After giving it another thought, I feel this does not belong to this library. This is a very easy utility method to add, so users who need that can re-add it on their project. Also, in the context of a Remix app, it is just easier to re-send the whole metaobject on updating.
+
 ## 0.18.0
 
 - [BC] To allow support for different kind of environments (admin API, direct access, storefront API...), the `createContext` method has been replaced by three dedicated functions: `createAdminContext`, `createDirectAccessContext` and `createStorefrontApiContext`. You now must use the appropriate method based on the context you intent to use the library.

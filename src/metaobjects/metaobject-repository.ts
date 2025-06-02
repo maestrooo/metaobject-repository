@@ -1,6 +1,6 @@
 import { ApiVersion } from "@shopify/shopify-api";
 import { QueryBuilder } from "raku-ql";
-import type { Job, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload } from "~/types/admin.types";
+import type { MetaobjectDefinition, Job, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload } from "~/types/admin.types";
 import type { MetaobjectDefinitionSchema, FromDefinitionWithSystemData, ValidPopulatePaths } from "~/types/metaobject-definitions";
 import type { CreateInput, FindOptions, PaginatedMetaobjects, PopulateOptions, SortKey, UpdateInput, UpsertInput } from "~/types/metaobject-repository";
 import { UserErrorsException } from "~/exception/user-errors-exception";
@@ -33,6 +33,22 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
    * QUERIES
    * --------------------------------------------------------------------------------------------------------
    */
+
+  /**
+   * Get the count of metaobjects for this given type
+   */
+  async count(): Promise<number> {
+    const builder = QueryBuilder.query('GetCount')
+      .variables({ type: 'String!' })
+      .operation<MetaobjectDefinition>('metaobjectDefinitionByType', { type: '$type' }, (metaobjectDefinition) => {
+        metaobjectDefinition.fields('metaobjectsCount')
+      });
+
+    const variables = { type: this.type };
+    const { metaobjectDefinitionByType } = (await doRequest({ connection: this.connection, builder, variables })).data;
+
+    return metaobjectDefinitionByType?.metaobjectsCount || 0;
+  }
 
   /**
    * Find a metaobject by its ID

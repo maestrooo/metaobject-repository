@@ -1,3 +1,7 @@
+## 0.19.2
+
+- Add a new `count` method on repositories, that allow to get the number of metaobjects of a given type.
+
 ## 0.19.1
 
 - Internally rewrite how requests are made to Shopify. This change removed the dependency to Remix, and now makes the package compatible with admin extensions.

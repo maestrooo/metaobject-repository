@@ -98,6 +98,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 > It expects query params to be called `first`, `last`, `before`, `after`, `query`, `reverse` and `sortKey`. If you params are named differently, then you must extract the parameters manually.
 
+### Count
+
+You can get the count of metaobjects from a given type by using the `count` method:
+
+```ts
+const count = await eventRepository.count();
+```
+
 ---
 
 ## Creating metaobjects

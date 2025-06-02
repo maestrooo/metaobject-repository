@@ -1,4 +1,4 @@
-import { ApiVersion } from "@shopify/shopify-app-remix/server";
+import { ApiVersion } from "@shopify/shopify-api";
 import { QueryBuilder } from "raku-ql";
 import type { Job, Metaobject, MetaobjectBulkDeletePayload, MetaobjectCreatePayload, MetaobjectDeletePayload, MetaobjectsCreatePayload, MetaobjectUpdatePayload, MetaobjectUpsertPayload } from "~/types/admin.types";
 import type { MetaobjectDefinitionSchema, FromDefinitionWithSystemData, ValidPopulatePaths } from "~/types/metaobject-definitions";
@@ -56,7 +56,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       });
     
     const variables = { id: this.transformId(id) };
-    const { metaobject } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data;
+    const { metaobject } = (await doRequest({ connection: this.connection, builder, variables })).data;
 
     return metaobject ? deserialize(metaobject) : null;
   }
@@ -99,7 +99,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       });
 
     const variables = { handle: { handle, type: this.type } };
-    const { metaobjectByHandle } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data;
+    const { metaobjectByHandle } = (await doRequest({ connection: this.connection, builder, variables })).data;
 
     return metaobjectByHandle ? deserialize(metaobjectByHandle) : null;
   }
@@ -147,7 +147,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
         });
       });
 
-    const { nodes } = (await (await doRequest({ connection: this.connection, builder })).json()).data.metaobjects;
+    const { nodes } = (await doRequest({ connection: this.connection, builder })).data.metaobjects;
 
     return nodes.map((metaobject: Metaobject) => deserialize(metaobject));
   }
@@ -188,7 +188,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
         });
       });
 
-    const { nodes, pageInfo } = (await (await doRequest({ connection: this.connection, builder })).json()).data.metaobjects;
+    const { nodes, pageInfo } = (await doRequest({ connection: this.connection, builder })).data.metaobjects;
 
     return {
       pageInfo,
@@ -237,7 +237,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     };
 
-    const { metaobject, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metaobjectCreate;
+    const { metaobject, userErrors } = (await doRequest({ connection: this.connection, builder, variables })).data.metaobjectCreate;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -289,7 +289,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     };
 
-    const { metaobjects, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables, apiVersion: ApiVersion.Unstable })).json()).data.metaobjectsCreate;
+    const { metaobjects, userErrors } = (await doRequest({ connection: this.connection, builder, variables, apiVersion: ApiVersion.Unstable })).data.metaobjectsCreate;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -335,7 +335,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     };
 
-    const { metaobject, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metaobjectUpdate;
+    const { metaobject, userErrors } = (await doRequest({ connection: this.connection, builder, variables })).data.metaobjectUpdate;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -384,7 +384,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     };
 
-    const { metaobject, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metaobjectUpsert;
+    const { metaobject, userErrors } = (await doRequest({ connection: this.connection, builder, variables })).data.metaobjectUpsert;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -408,7 +408,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       });
 
     const variables = { id: this.transformId(id) };
-    const { deletedId, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metaobjectDelete; 
+    const { deletedId, userErrors } = (await doRequest({ connection: this.connection, builder, variables })).data.metaobjectDelete; 
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);
@@ -439,7 +439,7 @@ export class MetaobjectRepository<D extends MetaobjectDefinitionSchema, T extend
       }
     }
     
-    const { job, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metaobjectBulkDelete;
+    const { job, userErrors } = (await doRequest({ connection: this.connection, builder, variables })).data.metaobjectBulkDelete;
 
     if (userErrors.length > 0) {
       throw new UserErrorsException(userErrors);

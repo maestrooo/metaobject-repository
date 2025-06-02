@@ -134,7 +134,7 @@ export class MetafieldDefinitionManager {
       });
 
     // Perform the request
-    const { createdDefinition, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables: { definition } })).json()).data.metafieldDefinitionCreate;
+    const { createdDefinition, userErrors } = (await doRequest({ connection: this.connection, builder, variables: { definition } })).data.metafieldDefinitionCreate;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -166,7 +166,7 @@ export class MetafieldDefinitionManager {
       });
 
     // Perform the request
-    const { userErrors } = (await (await doRequest({ connection: this.connection, builder, variables: { definition } })).json()).data.metafieldDefinitionUpdate;
+    const { userErrors } = (await doRequest({ connection: this.connection, builder, variables: { definition } })).data.metafieldDefinitionUpdate;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -192,7 +192,7 @@ export class MetafieldDefinitionManager {
 
     // Perform the request
     const variables = { deleteAllAssociatedMetafields, identifier };
-    const { deletedDefinitionId, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metafieldDefinitionDelete;
+    const { deletedDefinitionId, userErrors } = (await doRequest({ connection: this.connection, builder, variables })).data.metafieldDefinitionDelete;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -217,7 +217,7 @@ export class MetafieldDefinitionManager {
 
     // Perform the request
     const variables = { identifier };
-    const { userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metafieldDefinitionPin;
+    const { userErrors } = (await doRequest({ connection: this.connection, builder, variables })).data.metafieldDefinitionPin;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -240,7 +240,7 @@ export class MetafieldDefinitionManager {
 
     // Perform the request
     const variables = { identifier };
-    const { userErrors } = (await (await doRequest({ connection: this.connection, builder, variables })).json()).data.metafieldDefinitionUnpin;
+    const { userErrors } = (await doRequest({ connection: this.connection, builder, variables })).data.metafieldDefinitionUnpin;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);

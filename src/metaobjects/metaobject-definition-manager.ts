@@ -158,7 +158,7 @@ export class MetaobjectDefinitionManager {
         metaobjectDefinition.fields('id')
       });
 
-    const { metaobjectDefinitionByType } = (await (await doRequest({ connection: this.connection, builder, variables: { type } })).json()).data;
+    const { metaobjectDefinitionByType } = (await doRequest({ connection: this.connection, builder, variables: { type } })).data;
 
     return metaobjectDefinitionByType?.id ?? null;
   }
@@ -206,7 +206,7 @@ export class MetaobjectDefinitionManager {
           });
       });
 
-    const { metaobjectDefinitionByType } = (await (await doRequest({ connection: this.connection, builder, variables: { type } })).json()).data;
+    const { metaobjectDefinitionByType } = (await doRequest({ connection: this.connection, builder, variables: { type } })).data;
 
     return metaobjectDefinitionByType;
   }
@@ -248,7 +248,7 @@ export class MetaobjectDefinitionManager {
       });
 
     // Perform the request
-    const { metaobjectDefinition, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables: { definition } })).json()).data.metaobjectDefinitionCreate;
+    const { metaobjectDefinition, userErrors } = (await doRequest({ connection: this.connection, builder, variables: { definition } })).data.metaobjectDefinitionCreate;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -286,7 +286,7 @@ export class MetaobjectDefinitionManager {
           });
       });
 
-    const { userErrors } = (await (await doRequest({ connection: this.connection, builder, variables: { id, definition: options.definition } })).json()).data.metaobjectDefinitionUpdate;
+    const { userErrors } = (await doRequest({ connection: this.connection, builder, variables: { id, definition: options.definition } })).data.metaobjectDefinitionUpdate;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -314,7 +314,7 @@ export class MetaobjectDefinitionManager {
           });
       });
 
-    const { deletedId, userErrors } = (await (await doRequest({ connection: this.connection, builder, variables: { id } })).json()).data.metaobjectDefinitionDelete;
+    const { deletedId, userErrors } = (await doRequest({ connection: this.connection, builder, variables: { id } })).data.metaobjectDefinitionDelete;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);

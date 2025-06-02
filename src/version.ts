@@ -1,1 +1,3 @@
-export const apiVersion: string = '2025-04';
+import { ApiVersion } from "@shopify/shopify-api";
+
+export const apiVersion: ApiVersion = ApiVersion.April25;

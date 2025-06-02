@@ -1,12 +1,11 @@
-import { ApiVersion } from "@shopify/shopify-app-remix/server";
-import type { AdminOperations } from "@shopify/admin-api-client";
-import type { AdminGraphqlClient } from "@shopify/shopify-app-remix/server";
 import { OperationBuilder } from "raku-ql";
 import { apiVersion as defaultApiVersion } from "~/version";
+import type { GraphQLResponse, QueryAdminApi } from "~/types/request";
+import type { ApiVersion } from "@shopify/shopify-api";
 
 type AdminConnection = {
   type: 'admin';
-  client: AdminGraphqlClient<AdminOperations>;
+  client: QueryAdminApi;
   shopDomain?: never;
   storefrontAccessToken?: never;
 };
@@ -27,8 +26,6 @@ type DirectAccessConnection = {
 
 export type ConnectionOptions = AdminConnection | StorefrontConnection | DirectAccessConnection;
 
-type FuncReturnType = ReturnType<AdminGraphqlClient<AdminOperations>>;
-
 type DoRequestOptions = {
   builder: OperationBuilder;
   connection: ConnectionOptions;
@@ -36,16 +33,18 @@ type DoRequestOptions = {
   apiVersion?: ApiVersion;
 }
 
-export function doRequest({ connection, builder, variables, apiVersion }: DoRequestOptions): FuncReturnType {
-  const apiVersionToUse = (apiVersion ?? defaultApiVersion) as ApiVersion;
+export async function doRequest({ connection, builder, variables, apiVersion }: DoRequestOptions): Promise<GraphQLResponse> {
+  const apiVersionToUse = (apiVersion ?? defaultApiVersion);
 
   if (typeof window !== 'undefined') {
     if (connection.type === 'admin') {
       throw new Error('Admin access cannot be used in the browser. To use it in the browser, either use the `createDirectAccessContext` or `createStorefrontApiContext` functions.');
     }
 
+    let response;
+
     if (connection.type === 'direct_access') {
-      return fetch(`shopify:admin/api/${apiVersionToUse}/graphql.json`, {
+      response = fetch(`shopify:admin/api/${apiVersionToUse}/graphql.json`, {
         method: 'POST',
         body: JSON.stringify({
           query: builder.build(),
@@ -56,7 +55,7 @@ export function doRequest({ connection, builder, variables, apiVersion }: DoRequ
       let shopDomain = connection.shopDomain.replace(/^https?:\/\//, '').replace(/\/$/, '');
       shopDomain = shopDomain.endsWith('.myshopify.com') ? shopDomain : `${shopDomain}.myshopify.com`;
 
-      return fetch(`https://${shopDomain}/api/${apiVersionToUse}/graphql.json`, {
+      response = fetch(`https://${shopDomain}/api/${apiVersionToUse}/graphql.json`, {
         method: 'POST',
         body: JSON.stringify({
           query: builder.build(),
@@ -64,10 +63,12 @@ export function doRequest({ connection, builder, variables, apiVersion }: DoRequ
         }),
       });
     }
+
+    return (await (await response)?.json());
   }
 
   if (connection.type === 'admin') {
-    return connection.client(builder.build(), { variables, apiVersion: apiVersionToUse });
+    return (await (await connection.client(builder.build(), { variables, apiVersion: apiVersionToUse })).json());
   }
 
   throw new Error('No valid connection found. Use the `createDirectAccessContext`, `createStorefrontApiContext` or `createAdminContext` functions to create a valid connection.');

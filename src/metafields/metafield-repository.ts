@@ -56,7 +56,7 @@ export class MetafieldRepository {
 
     const variables = { key: opts.key, namespace: opts.namespace };
 
-    const metafield = (await ((await doRequest({ connection: this.connection, builder, variables })).json())).data.currentAppInstallation.metafield;
+    const metafield = (await doRequest({ connection: this.connection, builder, variables })).data.currentAppInstallation.metafield;
 
     return metafield ? deserializeMetafield(metafield) : null;
   }
@@ -96,7 +96,7 @@ export class MetafieldRepository {
         })
       })
 
-    const { nodes: items, pageInfo } = (await ((await doRequest({ connection: this.connection, builder, variables })).json())).data.currentAppInstallation.metafields;
+    const { nodes: items, pageInfo } = (await doRequest({ connection: this.connection, builder, variables })).data.currentAppInstallation.metafields;
 
     return {
       pageInfo,
@@ -151,7 +151,7 @@ export class MetafieldRepository {
       });
 
     const variables = { id: opts.owner, namespace: opts.namespace, key: opts.key };
-    const { metafield } = (await ((await doRequest({ connection: this.connection, builder, variables })).json())).data[operationName];
+    const { metafield } = (await doRequest({ connection: this.connection, builder, variables })).data[operationName];
 
     return metafield ? deserializeMetafield(metafield) : null;
   }
@@ -189,7 +189,7 @@ export class MetafieldRepository {
         })
       })
 
-    const { nodes: items, pageInfo } = (await ((await doRequest({ connection: this.connection, builder, variables })).json())).data.metafields;
+    const { nodes: items, pageInfo } = (await doRequest({ connection: this.connection, builder, variables })).data.metafields;
 
     return {
       pageInfo,
@@ -227,7 +227,7 @@ export class MetafieldRepository {
           });
       })
 
-    const { userErrors } = (await (await doRequest({ connection: this.connection, builder, variables: { metafields: metafieldsSet } })).json()).data.metafieldsSet;
+    const { userErrors } = (await doRequest({ connection: this.connection, builder, variables: { metafields: metafieldsSet } })).data.metafieldsSet;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -248,7 +248,7 @@ export class MetafieldRepository {
           });
       });
 
-    const { userErrors } = (await (await doRequest({ connection: this.connection, builder, variables: { metafields: identifiers } })).json()).data.metafieldsDelete;
+    const { userErrors } = (await doRequest({ connection: this.connection, builder, variables: { metafields: identifiers } })).data.metafieldsDelete;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -267,7 +267,7 @@ export class MetafieldRepository {
             currentAppInstallation.fields('id');
           });
 
-        return (await (await doRequest({ connection: this.connection, builder })).json()).data.currentAppInstallation.id;
+        return (await doRequest({ connection: this.connection, builder })).data.currentAppInstallation.id;
       })();
     }
 

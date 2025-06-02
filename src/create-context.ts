@@ -1,5 +1,3 @@
-import type { AdminOperations } from "@shopify/admin-api-client";
-import type { AdminGraphqlClient } from "@shopify/shopify-app-remix/server";
 import { MetafieldDefinitionManager } from "./metafields/metafield-definition-manager";
 import { MetafieldRepository } from "./metafields/metafield-repository";
 import { MetaobjectDefinitionManager } from "./metaobjects/metaobject-definition-manager";
@@ -9,6 +7,7 @@ import type { MetafieldDefinitionSchema } from "./types/metafield-definitions";
 import type { MetaobjectDefinitionSchema } from "./types/metaobject-definitions";
 import type { CamelCase } from "./types/utils";
 import type { ConnectionOptions } from "./utils/request";
+import type { QueryAdminApi } from "./types/request";
 
 type CreateContextOptions<MOD extends MetaobjectDefinitionSchema, MFD extends MetafieldDefinitionSchema> = {
   connection: ConnectionOptions;
@@ -17,7 +16,7 @@ type CreateContextOptions<MOD extends MetaobjectDefinitionSchema, MFD extends Me
 }
 
 type CreateAdminContextOptions<MOD extends MetaobjectDefinitionSchema, MFD extends MetafieldDefinitionSchema> = {
-  client: AdminGraphqlClient<AdminOperations>;
+  client: QueryAdminApi;
   metaobjectDefinitions?: MOD;
   metafieldDefinitions?: MFD
 }

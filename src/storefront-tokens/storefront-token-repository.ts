@@ -23,7 +23,7 @@ export class StorefrontTokenRepository {
         })
       })
 
-    return (await (await doRequest({ connection: this.connectionOptions, builder })).json()).data.shop.storefrontAccessTokens.nodes;
+    return (await doRequest({ connection: this.connectionOptions, builder })).data.shop.storefrontAccessTokens.nodes;
   }
 
   /**
@@ -42,7 +42,7 @@ export class StorefrontTokenRepository {
       });
 
     const input = { title: options.title };
-    const { storefrontAccessToken, userErrors } = (await (await doRequest({ connection: this.connectionOptions, builder, variables: { input } })).json()).data.storefrontAccessTokenCreate;
+    const { storefrontAccessToken, userErrors } = (await doRequest({ connection: this.connectionOptions, builder, variables: { input } })).data.storefrontAccessTokenCreate;
 
     if (userErrors.length > 0) {
       console.warn(userErrors);
@@ -84,7 +84,7 @@ export class StorefrontTokenRepository {
             })
         });
 
-      const { userErrors } = (await (await doRequest({ connection: this.connectionOptions, builder, variables: { input: { id: tokenToDelete.id } } })).json()).data.storefrontAccessTokenDelete;
+      const { userErrors } = (await doRequest({ connection: this.connectionOptions, builder, variables: { input: { id: tokenToDelete.id } } })).data.storefrontAccessTokenDelete;
 
       if (userErrors.length > 0) {
         console.warn(userErrors);

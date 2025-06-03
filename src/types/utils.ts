@@ -1,3 +1,7 @@
+export type Simplify<T> = { [K in keyof T]: T[K] } extends infer O
+  ? { [K in keyof O]: O[K] }
+  : never;
+
 export type MakeOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 export type Head<S extends string> =

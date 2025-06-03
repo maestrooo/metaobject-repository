@@ -1,3 +1,7 @@
+## 0.19.5
+
+- Improve the typing system. The black magic will now output in Intellisense a much more intelligible output.
+
 ## 0.19.4
 
 - Add an optional second parameter to `extractFindParams` to use a custom page size instead of the default 50.

@@ -1,7 +1,7 @@
 import type { JSONSchema, FromSchema } from "json-schema-to-ts";
 import type { MetaobjectAccessInput, MetaobjectThumbnail, MetaobjectCapabilityDataOnlineStore, MetaobjectCapabilityDataPublishable, MetaobjectCapabilityCreateInput } from "~/types/admin.types";
 import type { BaseFieldType, DefaultMap, FileMapping, FileTypeVal, MaybeNullableNonList, PopulatedMap } from "./fields";
-import type { CamelCase, CamelCaseKeys, Head, Tail } from "./utils";
+import type { CamelCase, CamelCaseKeys, Head, Simplify, Tail } from "./utils";
 import type { MetafieldBaseDefinition } from "./metafield-definitions";
 
 /**
@@ -203,6 +203,6 @@ export type FromDefinitionWithSystemData<
   P extends string = never,
   C extends boolean = false,
   Th extends boolean = false
-> = FromDefinition<D, T, P> & {
+> = Simplify<FromDefinition<D, T, P> & {
   readonly system: Readonly<SystemData<D, T, C, Th>>;
-}
+}>

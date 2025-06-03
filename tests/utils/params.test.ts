@@ -45,6 +45,20 @@ describe('extractFindParams()', () => {
     })
   })
 
+  it('set default last when only before is visible', () => {
+    const params = new URLSearchParams({
+      before: 'CURSOR_BEFORE',
+    })
+    const result = extractFindParams(params)
+    expect(result).toEqual<FindOptions>({
+      last: 50,
+      before: 'CURSOR_BEFORE',
+      sortKey: undefined,
+      query: undefined,
+      reverse: false,
+    })
+  })
+
   it('reads sortKey when present', () => {
     const params = new URLSearchParams()
     params.set('sortKey', 'UPDATED_AT' as SortKey)

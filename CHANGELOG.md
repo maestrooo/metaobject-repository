@@ -1,3 +1,7 @@
+## 0.19.3
+
+- Improve the `extractFindParams` to automatically set a `last` of 50 when only `before` is available.
+
 ## 0.19.2
 
 - Add a new `count` method on repositories, that allow to get the number of metaobjects of a given type.

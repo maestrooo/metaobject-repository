@@ -1,3 +1,7 @@
+## 0.19.4
+
+- Add an optional second parameter to `extractFindParams` to use a custom page size instead of the default 50.
+
 ## 0.19.3
 
 - Improve the `extractFindParams` to automatically set a `last` of 50 when only `before` is available.

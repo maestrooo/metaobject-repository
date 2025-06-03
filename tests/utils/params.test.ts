@@ -15,6 +15,18 @@ describe('extractFindParams()', () => {
     })
   })
 
+  it('defaults to custom page size', () => {
+    const params = new URLSearchParams()
+    const result = extractFindParams(params, 25)
+    expect(result).toEqual<FindOptions>({
+      first: 25,
+      after: undefined,
+      sortKey: undefined,
+      query: undefined,
+      reverse: false,
+    })
+  })
+
   it('parses first and after correctly', () => {
     const params = new URLSearchParams({
       first: '20',

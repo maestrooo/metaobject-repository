@@ -1,3 +1,5 @@
+> DISCLAIMER: This repository is currently only for doing some experiments. I am not yet 100% convinced on the approach here, and I am experimenting various other approaches to interact with metaobjects.
+
 # Metaobject Repository Documentation
 
 Welcome to the documentation for **Metaobject Repository**, a fully-typed abstraction layer for working with [Shopify metaobjects](https://shopify.dev/docs/custom-data/metaobjects). The library helps you managing definitions (both metaobjects and metafields), metaobjects, metafields and storefront access tokens.

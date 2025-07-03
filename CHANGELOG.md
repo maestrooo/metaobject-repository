@@ -1,3 +1,7 @@
+## 0.19.6
+
+- Fixed an issue where the storefront access token were missing the type.
+
 ## 0.19.5
 
 - Improve the typing system. The black magic will now output in Intellisense a much more intelligible output.

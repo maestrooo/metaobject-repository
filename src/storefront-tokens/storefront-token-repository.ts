@@ -31,6 +31,7 @@ export class StorefrontTokenRepository {
    */
   async createToken(options: { title: string }): Promise<PickedStorefrontAccessToken> {
     const builder = QueryBuilder.mutation('CreateStorefrontToken')
+      .variables({ input: 'StorefrontAccessTokenInput!' })
       .operation<StorefrontAccessTokenCreatePayload>('storefrontAccessTokenCreate', { input: '$input' }, payload => {
         payload
           .object('storefrontAccessToken', token => {
@@ -76,6 +77,7 @@ export class StorefrontTokenRepository {
 
     if (tokenToDelete) {
       const builder = QueryBuilder.mutation('DeleteStorefrontToken')
+        .variables({ input: 'StorefrontAccessTokenDeleteInput!' })
         .operation<StorefrontAccessTokenDeletePayload>('storefrontAccessTokenDelete', { input: '$input' }, payload => {
           payload
             .fields('deletedStorefrontAccessTokenId')

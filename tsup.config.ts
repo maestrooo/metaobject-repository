@@ -1,10 +1,21 @@
 import { defineConfig } from "tsup";
 
-export default defineConfig({
-  entry: ["src/index.ts"],
-  format: ["esm"], // Build for commonJS and ESmodules
-  dts: true, // Generate declaration file (.d.ts)
-  splitting: false,
-  sourcemap: true,
-  clean: true,
-});
+export default defineConfig([
+  // library entry
+  {
+    entry: { index: "src/index.ts" },
+    format: ["esm"],
+    dts: true,
+    sourcemap: true,
+    clean: true
+  },
+  // CLI entry
+  {
+    entry: { "cli/generate-metaobject-types": "src/cli/generate-metaobject-types.ts" },
+    format: ["esm"],
+    dts: false,           // no need for types for the CLI
+    splitting: false,     // produce a single file
+    sourcemap: true,
+    clean: false
+  }
+]);

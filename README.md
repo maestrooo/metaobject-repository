@@ -143,4 +143,16 @@ Ideas:
 
 ```ts
 metaobjectRepository.query(MyQuery, { id: 'Foo' });
+
+
+
+// Get a metaobject
+const foo = await getMetaobject({ type: '$app:foo', id: '123' });
+foo.id;
+foo.handle;
+foo.fields.hasWifi;
+foo.fields.product;
+
+// Convert to a schema
+const createdId = await create({ schema: CreateSchema })
 ```

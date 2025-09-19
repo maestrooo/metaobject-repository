@@ -1,19 +1,21 @@
-export type { MetaobjectFieldDefinition, MetaobjectDefinitionSchemaEntry, MetaobjectDefinitionSchema } from './types/metaobject-definitions';
-export type { InferObjectType } from './types/metaobject-repository';
-export { MetaobjectDefinitionManager } from './metaobjects/metaobject-definition-manager';
-export { MetaobjectRepository } from './metaobjects/metaobject-repository';
+import * as v from "valibot";
+import { MetaobjectRepository } from "./persistence/repository";
+import { repositoryFor } from "../app/types/metaobject-types";
 
-export type { MetafieldDefinitionSchemaEntry as MetafieldDefinitionSchemaEntry, MetafieldDefinitionSchema } from './types/metafield-definitions';
-export { MetafieldDefinitionManager } from './metafields/metafield-definition-manager';
-export { MetafieldRepository } from './metafields/metafield-repository';
+export * from "./runtime/types";
+export { toFieldsObject } from "./fields/deserializer";
+export { serializeFields } from "./fields/serializer";
 
-export { StorefrontTokenRepository } from './storefront-tokens/storefront-token-repository';
+export { MetaobjectRepository } from "./persistence/repository";
 
-export { NotFoundException, UserErrorsException, DefinitionTakenException } from './exception';
+const Schema = v.object({
+  title: v.string()
+});
 
-export { flattenFields } from './utils/flatten';
-export { extractFindParams } from './utils/params';
-export type { OnPopulateFunc, OnPopulateWithoutDefinitionFunc } from './utils/builder';
-export type { ConnectionOptions } from './utils/request';
+//const r = new MetaobjectRepository<CustomField>('$app:custom-field');
+//r.create({ schema: Schema, fields: { title: '123' }})
 
-export { createAdminContext, createDirectAccessContext, createStorefrontApiContext } from './create-context';
+const r = repositoryFor('$app:custom-field');
+const client: any = null;
+const ob = await r.getById({ client, id: '123', with: { thumbnail: true, fields: { reference: true } } });
+ob.
